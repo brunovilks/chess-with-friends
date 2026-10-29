@@ -143,6 +143,11 @@ body:has(#game:not(.hidden)) .ingame{display:grid!important}
 .play .colors .rnd piece{width:24px;height:24px}
 .play .big{margin-top:4px}
 button.link{color:var(--accent2);font-weight:600;font-size:14px}
+.twobtn{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.twobtn .btn.alt{font-size:14px;padding:12px 6px}
+.seekbox .spinner{width:56px;height:56px;border-width:5px}
+.seekbox .stc{font-size:18px;font-weight:700;margin:2px 0 4px}
+.seekbox .stime{font:700 28px/1 ui-monospace,Consolas,monospace;margin:10px 0;font-variant-numeric:tabular-nums}
 .btn.small.g{background:var(--accent);color:#fff}
 .profhead{display:flex;align-items:center;gap:14px;margin-bottom:12px}
 #name{font-size:22px!important}
@@ -393,8 +398,11 @@ footer a{color:#6b665e}
         <button data-c="r" class="on" title="Random"><span class="rnd"><piece class="king white"></piece><piece class="king black"></piece></span></button>
         <button data-c="b" title="Black"><piece class="king black"></piece></button>
       </div>
-      <button class="big" id="create">Play a friend</button>
-      <button class="btn alt" id="local">📱 Play on this device</button>
+      <button class="big" id="seek">Play online</button>
+      <div class="twobtn">
+        <button class="btn alt" id="create">👥 Play a friend</button>
+        <button class="btn alt" id="local">📱 Same device</button>
+      </div>
     </section>
 
     <section class="card hidden" id="quickfr">
@@ -844,12 +852,14 @@ async function lobbyLoop(){
       const r = await fetch(`/api/lobby?pid=${ME.pid}&secret=${ME.secret}&since=${LOBBY.v}`, {cache:'no-store'});
       if(r.status === 401){ await hello(); LOBBY.v = -1; continue; }
       const st = await r.json(); fails = 0;
-      LOBBY.v = st.v; LOBBY.online = st.online; LOBBY.challenges = st.challenges;
+      LOBBY.v = st.v; LOBBY.online = st.online; LOBBY.challenges = st.challenges; LOBBY.match = st.match;
       onLobby();
     }catch{ fails++; await sleep(Math.min(5000, 800*fails)); }
   }
 }
 function onLobby(){
+  // rinda atrada pretinieku, kamēr gaidījām: uzreiz uz spēli
+  if(SEEK.on && LOBBY.match){ found(LOBBY.match); return; }
   let changed = false;
   for(const o of LOBBY.online) if(friends[o.pid] && friends[o.pid] !== o.name){ friends[o.pid] = o.name; changed = true; }
   for(const c of LOBBY.challenges){
@@ -879,7 +889,8 @@ function drawChallengeModal(){
   const inc = LOBBY.challenges.find(c => !c.friend && c.to === ME.pid && c.status === 'pending');
   const out = LOBBY.challenges.find(c => !c.friend && c.from === ME.pid && c.status === 'pending');
   const c = inc || out;
-  if(!c){ m.classList.add('hidden'); m.dataset.k = ''; return; }
+  if(!c){ if(!SEEK.on){ m.classList.add('hidden'); m.dataset.k = ''; } return; }
+  if(SEEK.on) stopSeek();   // drauga izaicinājums ir svarīgāks par rindu
   m.classList.remove('hidden');
   if(m.dataset.k === c.cid) return;
   m.dataset.k = c.cid;
@@ -999,6 +1010,48 @@ function drawLeaderboard(){
   });
 }
 
+/* ---------- rinda: spēle ar nejaušu pretinieku ---------- */
+const SEEK = {on: false, t0: 0, timer: null};
+async function startSeek(){
+  if(!HOME.minutes){ toast('Pick a time control with a clock to play online'); return; }
+  SEEK.on = true; SEEK.t0 = Date.now();
+  const m = $('#chal'); m.classList.remove('hidden'); m.dataset.k = 'seek';
+  const cat = catOf(HOME.minutes, HOME.inc);
+  const tc = HOME.inc ? `${HOME.minutes} | ${HOME.inc}` : `${HOME.minutes} min`;
+  m.innerHTML = `<div class="ocard seekbox"><div class="spinner"></div>
+    <h3>Finding an opponent</h3><div class="stc">${CAT_ICON[cat]} ${tc} · ${CAT_NAME[cat]}</div>
+    <div class="stime" id="stime">0:00</div><p id="sinfo">Looking for a player near your rating…</p>
+    <button class="btn" id="scancel" style="width:100%">Cancel</button></div>`;
+  $('#scancel').onclick = stopSeek;
+  const tick = async () => {
+    if(!SEEK.on) return;
+    const s = Math.floor((Date.now() - SEEK.t0) / 1000);
+    $('#stime') && ($('#stime').textContent = `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`);
+  };
+  SEEK.timer = setInterval(tick, 1000);
+  // pieprasījumu atkārto ik pēc 3 s: serveris pakāpeniski paplašina reitinga logu
+  while(SEEK.on){
+    const r = await api('/api/seek', {...auth(), minutes: HOME.minutes, inc: HOME.inc}).catch(() => null);
+    if(!SEEK.on) break;
+    if(r?.game){ found(r.game); return; }
+    if(r?.error){ toast(r.error); stopSeek(); return; }
+    if(r?.waiting && $('#sinfo')) $('#sinfo').textContent = r.seeking > 1
+      ? `${r.seeking - 1} other player${r.seeking > 2 ? 's' : ''} searching · range ±${r.window}`
+      : `Waiting for another player · range ±${r.window}`;
+    await sleep(3000);
+  }
+}
+function found(gid){
+  SEEK.on = false; clearInterval(SEEK.timer);
+  sound.start();
+  location.href = '/g/' + gid;
+}
+function stopSeek(){
+  SEEK.on = false; clearInterval(SEEK.timer);
+  api('/api/seek/cancel', auth()).catch(() => {});
+  $('#chal').classList.add('hidden'); $('#chal').dataset.k = '';
+}
+
 /* ---------- SĀKUMLAPA ---------- */
 function initHome(){
   loadProfile(); loadLeaderboard();
@@ -1062,6 +1115,7 @@ function initHome(){
     HOME.color = b.dataset.c;
   };
   $('#local').onclick = () => { unlockAudio(); location.href = `/local?m=${HOME.minutes}&i=${HOME.inc}`; };
+  $('#seek').onclick = () => { unlockAudio(); startSeek(); };
   $('#create').onclick = async () => {
     setName($('#name').value);
     const {minutes, inc, color} = HOME;

@@ -3,6 +3,7 @@
 Tikai Python standarta bibliotēka, nekas nav jāinstalē.
 Palaišana:  python server.py   (ports no vides mainīgā PORT, citādi 8000)
 """
+import gzip
 import hashlib
 import hmac
 import json
@@ -56,6 +57,7 @@ piece sets from lichess (CC BY-NC-SA 4.0 / GPLv2+ / Apache 2.0, see the project 
 
 games = {}
 games_lock = threading.Lock()
+INDEX_CACHE = {}
 
 
 def now_ms():
@@ -95,6 +97,15 @@ class Game:
         self.takeback = None     # krāsa, kas lūdz atsaukt gājienu
         self.rating_change = None
         self.rematch = set()
+
+    def cached_rating(self, pid, cat):
+        # optimizācija: reitingu nelasa no datubāzes katrā aptaujā, tikai pēc rezultāta maiņas
+        if not (cat and pid and pid.startswith("g")):
+            return None
+        cache = self.__dict__.setdefault("_rcache", {})
+        if pid not in cache:
+            cache[pid] = get_rating(pid, cat)["rating"]
+        return cache[pid]
 
     def pid_of(self, c):
         tok = self.seats.get(c)
@@ -165,6 +176,7 @@ class Game:
         except Exception as e:   # reitinga kļūda nedrīkst sabojāt pašu spēli
             print("rating error:", e, flush=True)
             self.rating_change = None
+        self.__dict__.pop("_rcache", None)
         self.bump()
         with lobby:
             bump_lobby()
@@ -203,7 +215,7 @@ class Game:
                     "name": self.names[c],
                     "online": t - self.seen[c] < ONLINE_WINDOW,
                     "away": round(t - self.seen[c]) if self.seen[c] else 0,
-                    "rating": get_rating(pids[c], cat)["rating"] if cat and pids[c] and pids[c].startswith("g") else None,
+                    "rating": self.cached_rating(pids[c], cat),
                     "picture": load_account(pids[c])["picture"] if pids[c] and pids[c].startswith("g") else "",
                 }
                 for c in ("w", "b")
@@ -420,11 +432,60 @@ def lobby_state(pid):
     mine = [dict(c, cid=cid, fromName=players.get(c["from"], {}).get("name", ""),
                  toName=players.get(c["to"], {}).get("name", ""))
             for cid, c in challenges.items() if pid in (c["from"], c["to"])]
-    return {"v": lobby_v[0], "online": online, "challenges": mine}
+    out = {"v": lobby_v[0], "online": online, "challenges": mine,
+           "seeking": {f"{s['minutes']}+{s['inc']}": 0 for s in seeks.values()}}
+    for s in seeks.values():
+        out["seeking"][f"{s['minutes']}+{s['inc']}"] += 1
+    if pid in matches:
+        out["match"] = matches[pid]
+    return out
+
+
+# --- rinda svešiem pretiniekiem ---
+seeks = {}      # pid -> {"minutes", "inc", "rating", "since", "seen"}
+matches = {}    # pid -> spēles id, kad rinda atrada pretinieku
+
+
+def seek_window(waited):
+    # sākumā meklē līdzīga līmeņa pretinieku (±100), ik pēc 5 s logs kļūst plašāks
+    return 100 + 50 * int(waited // 5)
+
+
+def try_match(pid):
+    me = seeks.get(pid)
+    if not me:
+        return None
+    t = time.time()
+    best = None
+    for q, s in seeks.items():
+        if q == pid or (s["minutes"], s["inc"]) != (me["minutes"], me["inc"]):
+            continue
+        gap = abs(s["rating"] - me["rating"])
+        # abiem jābūt gataviem pieņemt šādu reitinga starpību
+        if gap <= seek_window(t - me["since"]) and gap <= seek_window(t - s["since"]):
+            if best is None or gap < best[1]:
+                best = (q, gap)
+    if not best:
+        return None
+    other = best[0]
+    game = Game(me["minutes"], me["inc"], "w")
+    a, b = (pid, other) if secrets.randbelow(2) else (other, pid)
+    for c, p in (("w", a), ("b", b)):
+        game.seats[c], game.names[c] = players[p]["secret"], players[p]["name"]
+    with games_lock:
+        games[game.id] = game
+    for p in (pid, other):
+        seeks.pop(p, None)
+        matches[p] = game.id
+        players[p]["game"] = game.id
+    bump_lobby()
+    return game.id
 
 
 def lobby_cleanup():
     t = time.time()
+    for q in [q for q, s in seeks.items() if t - s["seen"] > 20]:   # pazudis meklētājs
+        del seeks[q]
     for cid in [c for c, v in challenges.items()
                 if v["t"] < t - (7 * 86400 if v.get("friend") and v["status"] == "pending" else 120)]:
         del challenges[cid]
@@ -437,36 +498,41 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
     # --- atbildes ---
-    def send_json(self, obj, code=200):
-        body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+    def send_body(self, body, ctype, cache, code=200):
+        # optimizācija: teksta atbildes saspiež ar gzip (lapa ~70 KB -> ~17 KB)
+        texty = ctype.startswith("text/") or any(k in ctype for k in ("json", "svg", "javascript", "manifest"))
+        gz = texty and len(body) > 1024 and "gzip" in (self.headers.get("Accept-Encoding") or "")
+        if gz:
+            body = gzip.compress(body, 6)
         self.send_response(code)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control", cache)
+        if gz:
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
         self.end_headers()
         self.wfile.write(body)
 
+    def send_json(self, obj, code=200):
+        body = json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        self.send_body(body, "application/json; charset=utf-8", "no-store", code)
+
     def send_index(self):
-        with open(INDEX, "rb") as f:
-            body = f.read()
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-cache")
-        self.end_headers()
-        self.wfile.write(body)
+        # lapu nolasa no diska tikai tad, ja tā ir mainījusies
+        mtime = os.path.getmtime(INDEX)
+        if INDEX_CACHE.get("mtime") != mtime:
+            with open(INDEX, "rb") as f:
+                INDEX_CACHE.update(mtime=mtime, body=f.read())
+        self.send_body(INDEX_CACHE["body"], "text/html; charset=utf-8", "no-cache")
 
     def send_file(self, paths, ctype):
         for path in paths:
             if os.path.isfile(path):
                 with open(path, "rb") as f:
                     body = f.read()
-                self.send_response(200)
-                self.send_header("Content-Type", ctype)
-                self.send_header("Content-Length", str(len(body)))
-                self.send_header("Cache-Control", "public, max-age=604800")
-                self.end_headers()
-                self.wfile.write(body)
+                cache = "no-cache" if path.endswith(("sw.js", ".webmanifest")) else "public, max-age=604800"
+                self.send_body(body, ctype, cache)
                 return
         self.send_json({"error": "Not found"}, 404)
 
@@ -636,7 +702,7 @@ class Handler(BaseHTTPRequestHandler):
                                 "games": {c: get_rating(pid, c)["games"] for c in CATS}}
             return self.send_json(out)
 
-        if path.startswith("/api/hello") or path.startswith("/api/challenge") or path == "/api/google":
+        if path.startswith("/api/hello") or path.startswith("/api/challenge") or path.startswith("/api/seek") or path == "/api/google":
             if path == "/api/google":
                 # tīkla pieprasījums Google — ārpus slēdzenes, lai citi negaida
                 data["_info"] = verify_google(str(data.get("credential", "")))
@@ -716,6 +782,30 @@ class Handler(BaseHTTPRequestHandler):
         if not p:
             return self.send_json({"error": "Unknown player"}, 401)
         me = str(data.get("pid"))
+
+        if path == "/api/seek":
+            minutes, inc = int(data.get("minutes", 10)), int(data.get("inc", 0))
+            if not (1 <= minutes <= 180 and 0 <= inc <= 60):
+                return self.send_json({"error": "Pick a time control with a clock"}, 400)
+            # pretinieks jau atrasts, kamēr gaidīju: atdod to spēli, nevis liek rindā no jauna
+            if me in matches:
+                return self.send_json({"game": matches.pop(me)})
+            s = seeks.get(me)
+            if not s or (s["minutes"], s["inc"]) != (minutes, inc):
+                cat = category(minutes, inc)
+                rating = get_rating(me, cat)["rating"] if me.startswith("g") else START_RATING
+                s = seeks[me] = {"minutes": minutes, "inc": inc, "rating": rating, "since": time.time()}
+            s["seen"] = time.time()
+            gid = try_match(me)
+            if gid:
+                return self.send_json({"game": gid})
+            same = sum(1 for x in seeks.values() if (x["minutes"], x["inc"]) == (minutes, inc))
+            return self.send_json({"waiting": True, "seeking": same, "window": seek_window(time.time() - s["since"])})
+        if path == "/api/seek/cancel":
+            seeks.pop(me, None)
+            matches.pop(me, None)
+            bump_lobby()
+            return self.send_json({"ok": True})
 
         if path == "/api/challenge":
             to = str(data.get("to", ""))
