@@ -115,6 +115,70 @@ select.sel{background:var(--panel2);border:0;border-radius:8px;padding:7px 10px;
 .rchange.up{color:var(--accent2)}.rchange.down{color:var(--red)}
 .abandon{margin:0 8px 8px;padding:10px;border-radius:9px;background:#4a3324;display:flex;align-items:center;gap:8px;font-size:14px}
 .abandon b{flex:1}
+
+/* ===== minimālistiskais izkārtojums ===== */
+header{background:var(--bg);border-bottom:0;height:56px;position:sticky;top:0;z-index:20}
+#hdrinfo,.ingame{display:none!important}
+body:has(#game:not(.hidden)) #hdrinfo{display:inline-block!important}
+body:has(#game:not(.hidden)) .ingame{display:grid!important}
+.view{display:grid;gap:14px}
+#home:not(.hidden){padding-bottom:96px!important;padding-top:8px!important}
+.hello{padding:6px 2px 2px}
+.hello-name{font-size:24px;font-weight:800;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mychip{flex:none;text-align:right;font-size:12px;color:var(--muted);line-height:1.2}
+.mychip b{display:block;font-size:22px;color:var(--text);font-variant-numeric:tabular-nums}
+.tcsel{width:100%;display:flex;align-items:center;justify-content:space-between;background:var(--panel2);border-radius:12px;padding:15px 16px;font-size:18px;font-weight:700}
+.tcsel:hover{background:#45423e}
+.tcsel .chev{color:var(--muted);transition:transform .15s}
+.tcsel[aria-expanded=true] .chev{transform:rotate(180deg)}
+.tcpanel{display:grid;gap:8px;background:var(--panel2);border-radius:12px;padding:10px;animation:pop .15s ease-out}
+.tcgroup{display:grid;grid-template-columns:96px 1fr 1fr 1fr;gap:6px;align-items:center}
+.tch{font-size:13px;color:var(--muted);font-weight:700}
+.tcgroup button{background:var(--panel);border-radius:9px;padding:10px 4px;font-weight:700;font-size:14px;border:2px solid transparent}
+.tcgroup button:hover{background:#2e2d2a}
+.tcgroup button.on{border-color:var(--accent);color:var(--accent2)}
+.play .colors{grid-template-columns:repeat(3,1fr);gap:6px}
+.play .colors button{padding:4px;border-radius:10px}
+.play .colors piece{width:28px;height:28px}
+.play .colors .rnd piece{width:24px;height:24px}
+.play .big{margin-top:4px}
+button.link{color:var(--accent2);font-weight:600;font-size:14px}
+.btn.small.g{background:var(--accent);color:#fff}
+.profhead{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+#name{font-size:22px!important}
+.credits{font-size:11px;color:#77746f;text-align:center;line-height:1.5;margin:4px 8px}
+.credits a{color:#8f8c86}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;grid-template-columns:repeat(3,1fr);background:#262421;border-top:1px solid var(--line);padding:6px max(10px,env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-right))}
+.tabbar button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;font-size:12px;font-weight:600;color:var(--muted);position:relative;border-radius:10px}
+.tabbar button span{font-size:21px;line-height:1;filter:grayscale(1);opacity:.75}
+.tabbar button.on{color:var(--text)}
+.tabbar button.on span{filter:none;opacity:1}
+.badge{position:absolute;top:2px;left:calc(50% + 8px);min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--accent);color:#fff;font:700 10px/16px system-ui;font-style:normal}
+@media (min-width:900px){.tabbar{left:50%;right:auto;width:420px;transform:translateX(-50%);bottom:14px;border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.4)}}
+/* spēles panelis: tīrs, ikonu josla */
+.side .hd{display:none!important}
+.side .acts{grid-template-columns:repeat(5,1fr)!important;padding:8px!important;border-top:1px solid var(--line)}
+body.local .side .acts{grid-template-columns:repeat(4,1fr)!important}
+.acts button{border-radius:10px!important}
+.acts button{position:relative}
+.side #chat{display:none!important}
+body.chatopen .side #chat{display:flex!important}
+#bchat.on{background:#353a2c;color:var(--accent2)}
+@media (max-width:900px){
+  .acts button{font-size:0!important;padding:12px 0!important}
+  .acts button span{font-size:20px!important}
+  .acts button.wide{font-size:13px!important;padding:9px 0!important}
+  .acts button.wide span{font-size:15px!important}
+  #moves{display:flex!important;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;max-height:none!important;min-height:0!important;flex:none!important;padding:8px;gap:2px;scrollbar-width:none;align-items:center}
+  #moves::-webkit-scrollbar{display:none}
+  #moves .mrow{display:flex;align-items:center;background:none!important;padding:0;flex:none}
+  #moves .mrow .n{padding:0 2px 0 6px}
+  #moves .mv{padding:5px 7px;white-space:nowrap}
+  #moves .empty,#moves>div:not(.mrow){padding:6px 8px!important}
+  .nav{padding:4px 8px 8px}
+  .side{border-radius:12px}
+  .status{border-top:0;padding:6px 12px 10px}
+}
 piece.ghost{filter:drop-shadow(0 8px 10px rgba(0,0,0,.45));transform:scale(1.12)!important}
 .mine piece.me:hover{filter:brightness(1.06)}
 /* turnīra stila iezīmes: pēdējais gājiens, izvēle, iespējamie gājieni */
@@ -297,65 +361,95 @@ footer a{color:#6b665e}
   <a class="logo" href="/"><span>♞</span>Gambit</a>
   <div class="sp"></div>
   <div class="pill" id="hdrinfo">Chess with friends</div>
-  <button class="hbtn" id="btheme" title="Board color" aria-label="Change board color">🎨</button>
-  <button class="hbtn" id="bmute" title="Sound" aria-label="Toggle sound">🔊</button>
+  <button class="hbtn hidden" id="btheme" title="Board color" aria-label="Change board color">🎨</button>
+  <button class="hbtn ingame" id="bmute" title="Sound" aria-label="Toggle sound">🔊</button>
   <button class="hbtn gear" id="bset" title="Settings" aria-label="Settings">⚙</button>
 </header>
 <div class="modal hidden" id="setm"></div>
 
 <!-- SĀKUMLAPA -->
 <main id="home" class="hidden">
-  <section class="hello">
-    <div class="ava big w" id="meava">?</div>
-    <div class="hello-txt">
-      <div class="muted">Hi,</div>
-      <input id="name" maxlength="20" placeholder="enter your name" aria-label="Your name" autocomplete="nickname">
-    </div>
-    <div id="gbox"></div>
-  </section>
+  <!-- PLAY: tikai tas, kas vajadzīgs, lai sāktu spēli -->
+  <div class="view" id="v-play">
+    <section class="hello">
+      <div class="ava big w" id="meava">?</div>
+      <div class="hello-txt">
+        <div class="muted" id="hellotime">Good to see you</div>
+        <div class="hello-name" id="helloname"></div>
+      </div>
+      <div class="mychip" id="mychip"></div>
+    </section>
 
-  <section class="card play">
-    <div class="tc" id="tc">
-      <button data-m="1" data-i="0">1<small>min</small></button>
-      <button data-m="3" data-i="0">3<small>min</small></button>
-      <button data-m="3" data-i="2">3|2<small>min</small></button>
-      <button data-m="5" data-i="0">5<small>min</small></button>
-      <button data-m="10" data-i="0" class="on">10<small>min</small></button>
-      <button data-m="15" data-i="10">15|10<small>min</small></button>
-      <button data-m="30" data-i="0">30<small>min</small></button>
-      <button data-m="0" data-i="0">∞<small>no clock</small></button>
-    </div>
-    <div class="colors" id="colors">
-      <button data-c="w" title="White"><piece class="king white"></piece></button>
-      <button data-c="r" class="on" title="Random"><span class="rnd"><piece class="king white"></piece><piece class="king black"></piece></span></button>
-      <button data-c="b" title="Black"><piece class="king black"></piece></button>
-    </div>
-    <button class="big" id="create">Play with a link</button>
-    <button class="btn alt" id="local">📱 Play on this device</button>
-  </section>
+    <section class="card play">
+      <button class="tcsel" id="tcsel" aria-expanded="false"><span id="tclabel">⏱ 10 min · Rapid</span><span class="chev">▾</span></button>
+      <div class="tcpanel hidden" id="tc">
+        <div class="tcgroup"><div class="tch">● Bullet</div><button data-m="1" data-i="0">1 min</button><button data-m="1" data-i="1">1 | 1</button><button data-m="2" data-i="1">2 | 1</button></div>
+        <div class="tcgroup"><div class="tch">⚡ Blitz</div><button data-m="3" data-i="0">3 min</button><button data-m="3" data-i="2">3 | 2</button><button data-m="5" data-i="0">5 min</button></div>
+        <div class="tcgroup"><div class="tch">⏱ Rapid</div><button data-m="10" data-i="0" class="on">10 min</button><button data-m="15" data-i="10">15 | 10</button><button data-m="20" data-i="0">20 min</button></div>
+        <div class="tcgroup"><div class="tch">♔ Classical</div><button data-m="30" data-i="0">30 min</button><button data-m="30" data-i="20">30 | 20</button><button data-m="0" data-i="0">No clock</button></div>
+      </div>
+      <div class="colors" id="colors" role="radiogroup" aria-label="Your color">
+        <button data-c="w" title="White"><piece class="king white"></piece></button>
+        <button data-c="r" class="on" title="Random"><span class="rnd"><piece class="king white"></piece><piece class="king black"></piece></span></button>
+        <button data-c="b" title="Black"><piece class="king black"></piece></button>
+      </div>
+      <button class="big" id="create">Play a friend</button>
+      <button class="btn alt" id="local">📱 Play on this device</button>
+    </section>
 
-  <section class="card social">
-    <div class="shead"><h2>Friends</h2><button class="btn small" id="fcopy">+ Add friend</button></div>
-    <input readonly id="flink" class="sr" tabindex="-1" aria-hidden="true">
-    <div id="friends"></div>
-    <div id="onlinewrap" class="hidden"><div class="label">Others online</div><div id="online"></div></div>
-  </section>
+    <section class="card hidden" id="quickfr">
+      <div class="shead"><h2>Online now</h2><button class="link" data-goto="friends">All friends ›</button></div>
+      <div class="plist" id="quicklist"></div>
+    </section>
+  </div>
 
-  <section class="card hidden" id="profcard">
-    <div class="shead"><h2>Your ratings</h2></div>
-    <div class="ratings" id="myratings"></div>
-    <div id="recentwrap" class="hidden"><div class="label">Recent games</div><div class="recent" id="recent"></div></div>
-  </section>
+  <!-- FRIENDS -->
+  <div class="view hidden" id="v-friends">
+    <section class="card social">
+      <div class="shead"><h2>Friends</h2><button class="btn small g" id="fcopy">+ Add friend</button></div>
+      <input readonly id="flink" class="sr" tabindex="-1" aria-hidden="true">
+      <div id="friends"></div>
+      <div id="onlinewrap" class="hidden"><div class="label">Others online</div><div id="online"></div></div>
+    </section>
+    <section class="card hidden" id="lbcard">
+      <div class="shead"><h2>Leaderboard</h2></div>
+      <div class="tabs" id="lbtabs">
+        <button data-cat="bullet">Bullet</button><button data-cat="blitz" class="on">Blitz</button>
+        <button data-cat="rapid">Rapid</button><button data-cat="classical">Classical</button>
+      </div>
+      <div class="lb" id="lb"></div>
+    </section>
+  </div>
 
-  <section class="card hidden" id="lbcard">
-    <div class="shead"><h2>Leaderboard</h2></div>
-    <div class="tabs" id="lbtabs">
-      <button data-cat="bullet">Bullet</button><button data-cat="blitz" class="on">Blitz</button>
-      <button data-cat="rapid">Rapid</button><button data-cat="classical">Classical</button>
-    </div>
-    <div class="lb" id="lb"></div>
-  </section>
+  <!-- PROFILE -->
+  <div class="view hidden" id="v-profile">
+    <section class="card">
+      <div class="profhead">
+        <div class="ava big w" id="meava2">?</div>
+        <div class="hello-txt">
+          <input id="name" maxlength="20" placeholder="Your name" aria-label="Your name" autocomplete="nickname">
+          <div class="muted">Tap your name to change it</div>
+        </div>
+      </div>
+      <div id="gbox"></div>
+    </section>
+    <section class="card hidden" id="profcard">
+      <div class="shead"><h2>Ratings</h2></div>
+      <div class="ratings" id="myratings"></div>
+      <div id="recentwrap" class="hidden"><div class="label">Recent games</div><div class="recent" id="recent"></div></div>
+    </section>
+    <section class="card">
+      <button class="btn alt" id="bset2">⚙ Settings</button>
+    </section>
+    <p class="credits">Piece sets from <a href="https://github.com/lichess-org/lila/blob/master/COPYING.md" target="_blank" rel="noopener">lichess</a> (Staunty, California, Maestro, Cardinal — CC BY-NC-SA 4.0; Cburnett, Merida — GPLv2+; Chessnut — Apache 2.0) · sounds from Freesound (JJTaynos, Amatsuuu, el_boss — CC0) · rules: chess.js &amp; python-chess · <a href="/privacy">Privacy &amp; terms</a></p>
+  </div>
 </main>
+
+<nav class="tabbar hidden" id="tabbar">
+  <button data-goto="play" class="on"><span>♟</span>Play</button>
+  <button data-goto="friends"><span>👥</span>Friends<i class="badge hidden" id="frbadge"></i></button>
+  <button data-goto="profile"><span>👤</span>Profile</button>
+</nav>
 
 <div class="modal hidden" id="chal"></div>
 
@@ -399,6 +493,7 @@ footer a{color:#6b665e}
       <button id="bdraw"><span>½</span>Draw</button>
       <button id="bresign"><span>⚑</span>Resign</button>
       <button id="bflip"><span>⇅</span>Flip</button>
+      <button id="bchat"><span>💬</span>Chat<i class="badge hidden" id="chatbadge"></i></button>
       <button id="bautorot" class="hidden wide"><span>⟳</span>Auto-rotate</button>
     </div>
     <div class="status" id="status"></div>
@@ -409,7 +504,6 @@ footer a{color:#6b665e}
   </aside>
 </main>
 
-<footer>Piece sets from <a href="https://github.com/lichess-org/lila/blob/master/COPYING.md" target="_blank" rel="noopener">lichess</a> (Staunty, California, Maestro, Cardinal by sadsnake1 &amp; Jerry S., CC BY-NC-SA 4.0; Cburnett &amp; Merida GPLv2+; Chessnut Apache 2.0) · sounds from Freesound (JJTaynos, Amatsuuu, el_boss, CC0) · rules: chess.js &amp; python-chess · <a href="/privacy">Privacy & terms</a></footer>
 <div class="toast" id="toast"></div>
 
 <script type="module">
@@ -656,11 +750,24 @@ function gate(){
 }
 const isGoogle = () => ME.pid.startsWith('g');
 function drawMe(){
-  const a = document.getElementById('meava'); if(!a) return;
-  if(ME.picture && isGoogle()){ a.innerHTML = ''; const im = new Image(); im.alt = ''; im.referrerPolicy = 'no-referrer'; im.src = ME.picture; a.appendChild(im); }
-  else a.textContent = (ME.name || '?')[0].toUpperCase();
+  for(const id of ['meava', 'meava2']){
+    const a = document.getElementById(id); if(!a) continue;
+    if(ME.picture && isGoogle()){ a.innerHTML = ''; const im = new Image(); im.alt = ''; im.referrerPolicy = 'no-referrer'; im.src = ME.picture; a.appendChild(im); }
+    else a.textContent = (ME.name || '?')[0].toUpperCase();
+  }
   const n = document.getElementById('name'); if(n && document.activeElement !== n) n.value = ME.name;
+  const hn = document.getElementById('helloname'); if(hn) hn.textContent = ME.name || 'Player';
+  const h = new Date().getHours(), ht = document.getElementById('hellotime');
+  if(ht) ht.textContent = h < 5 ? 'Late-night chess?' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  drawMyChip();
   drawGoogleBox();
+}
+// reitings tieši izvēlētajai laika kategorijai, lai uzreiz redzams, ar ko spēlēsi
+function catOf(m, i){ if(!m) return null; const e = m*60 + 40*i; return e < 180 ? 'bullet' : e < 600 ? 'blitz' : e < 1800 ? 'rapid' : 'classical'; }
+function drawMyChip(){
+  const el = document.getElementById('mychip'); if(!el) return;
+  const cat = catOf(HOME.minutes, HOME.inc), me = LB.data?.[ME.pid];
+  el.innerHTML = cat && me ? `<b>${me.ratings[cat]}</b>${CAT_NAME[cat]}` : '';
 }
 
 /* --- Google pieteikšanās --- */
@@ -815,6 +922,12 @@ function renderSocial(){
   const others = LOBBY.online.filter(o => o.pid !== ME.pid && !friends[o.pid]);
   $('#onlinewrap').classList.toggle('hidden', !others.length);
   $('#online').innerHTML = '<div class="plist">' + others.map(o => row(o.pid, o.name, o, false)).join('') + '</div>';
+  // Play ekrānā: tiešsaistē esošie draugi, kurus var uzreiz izaicināt
+  const onFr = fr.filter(([p]) => on.has(p));
+  $('#quickfr').classList.toggle('hidden', !onFr.length);
+  $('#quicklist').innerHTML = onFr.slice(0, 4).map(([p, n]) => row(p, n, on.get(p), true).replace(/<button class="x"[\s\S]*?<\/button>/, '')).join('');
+  const badge = $('#frbadge');
+  badge.textContent = onFr.length; badge.classList.toggle('hidden', !onFr.length);
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-ch],[data-add],[data-rm]'); if(!b) return;
@@ -871,7 +984,7 @@ async function loadLeaderboard(){
     LB.data = await api('/api/ratings', {token: ME.secret, pids: [ME.pid, ...Object.keys(friends)]});
     if(LB.data.error) return;
     $('#lbcard').classList.toggle('hidden', Object.keys(LB.data).length < 2);
-    drawLeaderboard(); renderSocial();
+    drawLeaderboard(); renderSocial(); drawMyChip();
   }catch{}
 }
 function drawLeaderboard(){
@@ -908,10 +1021,40 @@ function initHome(){
       .catch(() => { $('#flink').select(); document.execCommand('copy'); toast('Friend link copied'); });
   };
   renderSocial();
+  // apakšējā navigācija: Play / Friends / Profile
+  const views = {play: 'v-play', friends: 'v-friends', profile: 'v-profile'};
+  const go = v => {
+    if(!views[v]) v = 'play';
+    for(const [k, id] of Object.entries(views)) $('#' + id).classList.toggle('hidden', k !== v);
+    document.querySelectorAll('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.goto === v));
+    store.set('gambits:tab', v); scrollTo(0, 0);
+  };
+  $('#tabbar').classList.remove('hidden');
+  document.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => go(b.dataset.goto));
+  go(store.get('gambits:tab') || 'play');
+  $('#bset2').onclick = () => { unlockAudio(); openSettings(); };
+  // laika izvēle: viena poga, kas atver grupētu sarakstu; izvēle tiek atcerēta
+  const tcLabel = () => {
+    const cat = catOf(HOME.minutes, HOME.inc);
+    const t = !HOME.minutes ? 'No clock' : HOME.inc ? `${HOME.minutes} | ${HOME.inc}` : `${HOME.minutes} min`;
+    $('#tclabel').textContent = `${cat ? CAT_ICON[cat] : '∞'} ${t} · ${cat ? CAT_NAME[cat] : 'Casual'}`;
+    drawMyChip();
+  };
+  const saved = (store.get('gambits:tc') || '10,0').split(',').map(Number);
+  const pick = [...document.querySelectorAll('#tc button')].find(b => +b.dataset.m === saved[0] && +b.dataset.i === saved[1]);
+  if(pick){ $('#tc .on')?.classList.remove('on'); pick.classList.add('on'); HOME.minutes = saved[0]; HOME.inc = saved[1]; }
+  tcLabel();
+  $('#tcsel').onclick = () => {
+    const open = $('#tc').classList.toggle('hidden') === false;
+    $('#tcsel').setAttribute('aria-expanded', open);
+  };
   $('#tc').onclick = e => {
     const b = e.target.closest('button'); if(!b) return;
     $('#tc .on')?.classList.remove('on'); b.classList.add('on');
     HOME.minutes = +b.dataset.m; HOME.inc = +b.dataset.i;
+    store.set('gambits:tc', HOME.minutes + ',' + HOME.inc);
+    tcLabel();
+    $('#tc').classList.add('hidden'); $('#tcsel').setAttribute('aria-expanded', false);
   };
   $('#colors').onclick = e => {
     const b = e.target.closest('button'); if(!b) return;
@@ -927,7 +1070,7 @@ function initHome(){
       const r = await api('/api/new', {minutes, inc, color, pid: ME.pid, secret: ME.secret});
       location.href = '/g/' + r.id;
     }catch{
-      $('#create').disabled = false; $('#create').textContent = 'Play with a link';
+      $('#create').disabled = false; $('#create').textContent = 'Play a friend';
       toast('Could not reach the server');
     }
   };
@@ -1202,7 +1345,8 @@ function initGame(id){
     }
     const m = $('#moves'), atEnd = m.scrollTop + m.clientHeight >= m.scrollHeight - 30;
     m.innerHTML = html || '<div style="padding:14px;color:var(--muted)">No moves yet</div>';
-    if(live() || atEnd) m.scrollTop = m.scrollHeight;
+    if(live() || atEnd){ m.scrollTop = m.scrollHeight; m.scrollLeft = m.scrollWidth; }
+    else m.querySelector('.mv.cur')?.scrollIntoView({block: 'nearest', inline: 'center'});
   }
 
   function drawStatus(){
@@ -1304,7 +1448,14 @@ function initGame(id){
   function drawChat(){
     const msgs = S.st?.chat || [];
     if(msgs.length === S.chatN && S.chatKey === msgs[msgs.length-1]?.t) return;
+    const fresh = msgs.length - (S.chatN || 0);
     S.chatN = msgs.length; S.chatKey = msgs[msgs.length-1]?.t;
+    // aizvērtam čatam rāda nelasīto ziņu skaitu
+    if(!document.body.classList.contains('chatopen') && fresh > 0 && S.chatSeen !== undefined){
+      S.unread = (S.unread || 0) + fresh;
+      $('#chatbadge').textContent = S.unread; $('#chatbadge').classList.remove('hidden'); sound.notify();
+    }
+    S.chatSeen = true;
     const log = $('#chatlog');
     log.innerHTML = msgs.length ? msgs.map(m => m.who
       ? `<div><b class="${m.c||'s'}">${esc(m.who)}:</b> ${esc(m.text)}</div>`
@@ -1557,6 +1708,16 @@ function initGame(id){
 
   /* --- pogas --- */
   $('#bflip').onclick = () => { S.flip = !S.flip; buildBoard(); drawAll(false); };
+  // datorā čats atvērts pēc noklusējuma, telefonā tikai pēc pieskāriena
+  if(matchMedia('(min-width:901px) and (pointer:fine)').matches && !localMode) document.body.classList.add('chatopen');
+  const syncChatBtn = () => $('#bchat').classList.toggle('on', document.body.classList.contains('chatopen'));
+  syncChatBtn();
+  $('#bchat').onclick = () => {
+    const open = document.body.classList.toggle('chatopen');
+    syncChatBtn();
+    if(open){ S.unread = 0; $('#chatbadge').classList.add('hidden'); const l = $('#chatlog'); l.scrollTop = l.scrollHeight; $('#chatin').focus(); }
+  };
+  if(localMode) $('#bchat').classList.add('hidden');
   $('#bautorot').onclick = () => {
     S.autoRotate = !S.autoRotate; store.set('gambits:autorotate', S.autoRotate ? '1' : '0');
     S.flip = false; buildBoard(); drawAll(false);

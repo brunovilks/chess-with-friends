@@ -256,7 +256,7 @@ with db_lock:
     """)
     db.commit()
 
-START_RATING = 1200
+START_RATING = 500
 CATS = ("bullet", "blitz", "rapid", "classical")
 
 
