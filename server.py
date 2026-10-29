@@ -27,6 +27,26 @@ GAME_TTL = 24 * 3600          # neaktīvas spēles dzēš pēc 24 h
 POLL_WAIT = 20                # long-poll gaidīšana sekundēs
 ONLINE_WINDOW = 25            # cik sekundes skaitās "tiešsaistē"
 
+PRIVACY_HTML = """<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Gambit — Privacy & Terms</title>
+<style>body{font:16px/1.6 system-ui,sans-serif;max-width:680px;margin:0 auto;padding:24px 16px;background:#211f1c;color:#ece8e1}
+a{color:#93c95a}h1{font-size:26px}h2{font-size:19px;margin-top:28px}</style></head><body>
+<p><a href="/">← Back to Gambit</a></p>
+<h1>Privacy Policy & Terms of Use</h1>
+<h2>What we store</h2>
+<p>Gambit is a free hobby site for playing chess with friends. If you sign in with Google, we receive your Google
+account ID, name, email and profile picture from Google. We use only your name and picture to show you to other
+players, and a random player ID derived from your Google account to remember your friends list.</p>
+<p>Games, chat messages and friend lists are kept in the server's memory only. They are not sold, shared or used
+for advertising, and they are erased whenever the server restarts. Your browser also keeps your name, friends and
+settings in local storage on your own device.</p>
+<h2>Deleting your data</h2>
+<p>Sign out and clear this site's data in your browser. Server-side data disappears on the next restart.</p>
+<h2>Terms</h2>
+<p>Gambit is provided as is, free of charge and without any guarantee. Be respectful in chat. Open-source credits:
+pieces "cburnett" (CC BY-SA 3.0), sounds PyChess (GPL-3.0), move logic chess.js.</p>
+</body></html>"""
+
 games = {}
 games_lock = threading.Lock()
 
@@ -309,6 +329,14 @@ class Handler(BaseHTTPRequestHandler):
         url = urlparse(self.path)
         if url.path in ("/", "/local") or url.path.startswith("/g/") or url.path.startswith("/f/"):
             return self.send_index()
+        if url.path in ("/privacy", "/terms"):
+            body = PRIVACY_HTML.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if url.path.startswith("/s/"):
             return self.send_sound(url.path[3:])
         if url.path == "/health":
