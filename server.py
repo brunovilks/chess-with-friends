@@ -11,6 +11,7 @@ import secrets
 import threading
 import time
 import urllib.request
+import chess
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs, quote
 
@@ -44,7 +45,7 @@ settings in local storage on your own device.</p>
 <p>Sign out and clear this site's data in your browser. Server-side data disappears on the next restart.</p>
 <h2>Terms</h2>
 <p>Gambit is provided as is, free of charge and without any guarantee. Be respectful in chat. Open-source credits:
-pieces "cburnett" (CC BY-SA 3.0), sounds PyChess (GPL-3.0), move logic chess.js.</p>
+pieces "cburnett" (CC BY-SA 3.0), sounds by el_boss on Freesound (CC0), rules chess.js and python-chess.</p>
 </body></html>"""
 
 games = {}
@@ -77,13 +78,33 @@ class Game:
 
     def reset(self):
         self.gen = getattr(self, "gen", 0) + 1
+        self.board = chess.Board()   # serveris ir vienīgais noteikumu tiesnesis
         self.moves = []
         self.clock = {"w": self.minutes * 60000, "b": self.minutes * 60000}
+        self.clock_history = []      # pulksteņi pirms katra gājiena (gājiena atsaukšanai)
         self.last_move_at = None
         self.result = None   # '1-0', '0-1', '1/2-1/2'
         self.reason = None
         self.draw_offer = None   # krāsa, kas piedāvā
+        self.takeback = None     # krāsa, kas lūdz atsaukt gājienu
         self.rematch = set()
+
+    def judge(self):
+        """Pēc gājiena: mats, pats un automātiskie neizšķirti (kā chess.com)."""
+        b = self.board
+        if b.is_checkmate():
+            self.finish("1-0" if b.turn == chess.BLACK else "0-1", "mats")
+        elif b.is_stalemate():
+            self.finish("1/2-1/2", "pats")
+        elif b.is_insufficient_material():
+            self.finish("1/2-1/2", "materiāls")
+        elif b.can_claim_threefold_repetition():
+            self.finish("1/2-1/2", "atkārtošanās")
+        elif b.can_claim_fifty_moves():
+            self.finish("1/2-1/2", "50 gājieni")
+        else:
+            return False
+        return True
 
     # --- palīgi ---
     def color_of(self, token):
@@ -114,7 +135,12 @@ class Game:
             t = self.turn()
             if c[t] <= 0:
                 self.clock = c
-                self.finish("0-1" if t == "w" else "1-0", "laiks")
+                # FIDE: ja pretiniekam nav materiāla, ar ko matot, laika beigas ir neizšķirts
+                other = chess.BLACK if t == "w" else chess.WHITE
+                if self.board.has_insufficient_material(other):
+                    self.finish("1/2-1/2", "laiks-materiāls")
+                else:
+                    self.finish("0-1" if t == "w" else "1-0", "laiks")
                 return True
         return False
 
@@ -145,6 +171,7 @@ class Game:
             "result": self.result,
             "reason": self.reason,
             "drawOffer": self.draw_offer,
+            "takeback": self.takeback,
             "rematch": sorted(self.rematch),
             "players": {
                 c: {
@@ -212,6 +239,17 @@ def verify_google(credential):
     if int(info.get("exp", 0)) < time.time():
         return None
     return info
+
+
+def login_required():
+    # ja Google ir iestatīts, spēlēt drīkst tikai ar Google kontu
+    return bool(GOOGLE_CLIENT_ID)
+
+
+def token_ok(token):
+    if not login_required():
+        return True
+    return any(q.startswith("g") and p["secret"] == token for q, p in list(players.items()))
 
 
 def merge_friends(pid, add, remove):
@@ -294,7 +332,7 @@ class Handler(BaseHTTPRequestHandler):
     def send_sound(self, name):
         # tikai skaņu faili ar drošu nosaukumu: snd_<vārds>.ogg vai .wav
         base, _, ext = name.rpartition(".")
-        if ext not in ("ogg", "wav") or not base.startswith("snd_") or not base[4:].isalnum():
+        if ext not in ("ogg", "mp3") or not base.startswith("snd_") or not base[4:].isalnum():
             return self.send_json({"error": "Not found"}, 404)
         for folder in (os.path.join(ROOT, "sounds"), ROOT):
             path = os.path.join(folder, name)
@@ -302,7 +340,7 @@ class Handler(BaseHTTPRequestHandler):
                 with open(path, "rb") as f:
                     body = f.read()
                 self.send_response(200)
-                self.send_header("Content-Type", "audio/ogg" if ext == "ogg" else "audio/wav")
+                self.send_header("Content-Type", "audio/ogg" if ext == "ogg" else "audio/mpeg")
                 self.send_header("Content-Length", str(len(body)))
                 self.send_header("Cache-Control", "public, max-age=604800")
                 self.end_headers()
@@ -369,6 +407,8 @@ class Handler(BaseHTTPRequestHandler):
             if not game:
                 return self.send_json({"error": "Game not found"}, 404)
             token = q.get("token", [""])[0]
+            if not token_ok(token):
+                return self.send_json({"error": "Sign in with Google", "login": True}, 401)
             since = int(q.get("since", ["-1"])[0] or -1)
             deadline = time.time() + POLL_WAIT
             with game.cond:
@@ -393,6 +433,8 @@ class Handler(BaseHTTPRequestHandler):
         data = self.read_json()
 
         if path == "/api/new":
+            if not token_ok(str(data.get("secret", ""))):
+                return self.send_json({"error": "Sign in with Google", "login": True}, 401)
             minutes = int(data.get("minutes", 10))
             inc = int(data.get("inc", 0))
             color = data.get("color", "r")
@@ -414,6 +456,8 @@ class Handler(BaseHTTPRequestHandler):
         if not game:
             return self.send_json({"error": "Game not found"}, 404)
         token = str(data.get("token", ""))
+        if not token_ok(token):
+            return self.send_json({"error": "Sign in with Google", "login": True}, 401)
 
         with game.cond:
             if path == "/api/join":
@@ -439,6 +483,8 @@ class Handler(BaseHTTPRequestHandler):
                 # Google spēlētāju var atjaunot tikai ar pareizu atvasināto paroli
                 if valid and pid.startswith("g") and not hmac.compare_digest(secret, google_secret(pid)):
                     valid = False
+                if login_required() and not (valid and pid.startswith("g")):
+                    return self.send_json({"error": "Sign in with Google", "login": True}, 401)
                 if not valid:
                     pid = new_id(8)
                     while pid.startswith("g"):
@@ -565,20 +611,24 @@ class Handler(BaseHTTPRequestHandler):
         if int(data.get("ply", -1)) != len(game.moves):
             return self.send_json({"error": "Out of date — refreshing"}, 409)
         uci = str(data.get("uci", ""))
-        if not (4 <= len(uci) <= 5):
-            return self.send_json({"error": "Invalid move"}, 400)
+        try:
+            mv = chess.Move.from_uci(uci)
+        except ValueError:
+            mv = None
+        # serveris pats pārbauda, vai gājiens ir legāls (lapai neuzticamies)
+        if mv is None or not game.board.is_legal(mv):
+            return self.send_json({"error": "Illegal move"}, 400)
 
         t = now_ms()
+        game.clock_history.append((dict(game.clock), game.last_move_at))
         if game.clocks_running() and game.last_move_at:
             game.clock[me] = max(0, game.clock[me] - (t - game.last_move_at)) + game.inc * 1000
-        game.moves.append(uci)
+        game.board.push(mv)
+        game.moves.append(mv.uci())
         game.last_move_at = t
         game.draw_offer = None
-
-        end = data.get("end")
-        if isinstance(end, dict) and end.get("result") in ("1-0", "0-1", "1/2-1/2"):
-            game.finish(end["result"], str(end.get("reason", ""))[:40])
-        else:
+        game.takeback = None
+        if not game.judge():
             game.bump()
         return self.send_json({"ok": True})
 
@@ -613,6 +663,18 @@ class Handler(BaseHTTPRequestHandler):
         elif kind == "draw_decline" and game.draw_offer == other:
             game.draw_offer = None
             game.bump()
+        elif kind == "takeback" and not game.result and game.moves:
+            # lūgums atsaukt pēdējo savu gājienu; ja pretinieks jau lūdz — pieņem
+            if game.takeback == other:
+                self.do_takeback(game, other)
+            elif game.takeback != me:
+                game.takeback = me
+                game.bump()
+        elif kind == "takeback_accept" and game.takeback == other and not game.result:
+            self.do_takeback(game, other)
+        elif kind == "takeback_decline" and game.takeback == other:
+            game.takeback = None
+            game.bump()
         elif kind == "rematch" and game.result:
             game.rematch.add(me)
             if len(game.rematch) == 2:
@@ -626,6 +688,20 @@ class Handler(BaseHTTPRequestHandler):
             game.names[me] = str(data.get("name", ""))[:20]
             game.bump()
         return self.send_json({"ok": True})
+
+    @staticmethod
+    def do_takeback(game, asker):
+        # atsauc gājienus līdz brīdim, kad atkal ir lūdzēja gājiens (1 vai 2 pusgājieni)
+        undo = 1 if game.turn() != asker else 2
+        for _ in range(min(undo, len(game.moves))):
+            game.board.pop()
+            game.moves.pop()
+            game.clock, game.last_move_at = game.clock_history.pop()
+        if game.last_move_at:
+            game.last_move_at = now_ms()
+        game.takeback = None
+        game.draw_offer = None
+        game.bump()
 
 
 def main():

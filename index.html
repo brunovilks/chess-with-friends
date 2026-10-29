@@ -69,6 +69,23 @@ piece.ghosted{opacity:.55}
 .anim{transition:transform .2s cubic-bezier(.25,.8,.35,1)!important}
 piece.ghost{filter:drop-shadow(0 8px 10px rgba(0,0,0,.45));transform:scale(1.12)!important}
 .mine piece.me:hover{filter:brightness(1.06)}
+/* turnīra stila iezīmes: pēdējais gājiens, izvēle, iespējamie gājieni */
+:root{--last:rgba(255,255,51,.5);--sel:rgba(255,255,51,.62)}
+.sq.tgt::after{background:rgba(0,0,0,.14)!important;width:33%!important;height:33%!important}
+.sq.tgt.cap::after{background:transparent!important;border-color:rgba(0,0,0,.14)!important;width:92%!important;height:92%!important}
+.sq .cf,.sq .cr{font-weight:800}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.boardwrap.shake{animation:shake .18s 2}
+/* ieejas logs */
+.gate{position:fixed;inset:0;z-index:200;background:radial-gradient(ellipse at top,#2c3a22 0%,var(--bg) 60%);display:grid;place-items:center;padding:20px}
+.gate-card{max-width:380px;text-align:center}
+.gate-logo{width:84px;height:84px;margin:0 auto 14px;border-radius:20px;background:var(--accent);color:#16200c;font-size:56px;display:grid;place-items:center;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.gate h1{font-size:40px;margin:0 0 8px}
+.gate p{color:var(--muted);margin:0 0 22px;font-size:16px}
+#gatebtn{display:flex;justify-content:center;min-height:44px;margin-bottom:22px}
+.gate .gate-note{font-size:12px;margin:0}
+/* gājienu saraksts ar figūru ikonām */
+.mv .fig{display:inline-block;width:1.15em;height:1.15em;vertical-align:-.2em;margin-right:1px;background-size:cover;position:static}
 /* sākumlapa: viena kolonna, trīs bloki */
 #home:not(.hidden){display:grid!important;grid-template-columns:1fr!important;max-width:560px!important;gap:16px!important;padding-top:24px!important;align-items:start}
 .hello{display:flex;align-items:center;gap:14px;padding:4px 2px}
@@ -96,6 +113,7 @@ piece.ghost{filter:drop-shadow(0 8px 10px rgba(0,0,0,.45));transform:scale(1.12)
 .prow.off{opacity:.55}
 .btn.alt{width:100%;padding:12px;font-size:15px;border:2px solid var(--line);background:transparent}
 .btn.alt:hover{background:var(--panel2)}
+.acts{grid-template-columns:repeat(4,1fr)!important}
 .acts button.wide{grid-column:1/-1;flex-direction:row;justify-content:center;gap:8px}
 .acts button.on{background:#353a2c;color:var(--accent2)}
 body.local #chat,body.local #offer{display:none!important}
@@ -275,6 +293,16 @@ footer a{color:#6b665e}
 
 <div class="modal hidden" id="chal"></div>
 
+<div class="gate hidden" id="gate">
+  <div class="gate-card">
+    <div class="gate-logo">♞</div>
+    <h1>Gambit</h1>
+    <p>Play chess with your friends — online, by link, or on one device.</p>
+    <div id="gatebtn"></div>
+    <p class="gate-note">Sign in with your Google account to play. We only use your name and picture to show you to your friends. <a href="/privacy">Privacy</a></p>
+  </div>
+</div>
+
 <!-- SPĒLE -->
 <main id="game" class="hidden">
   <div class="boardcol">
@@ -297,7 +325,9 @@ footer a{color:#6b665e}
       <button data-nav="last" title="Current position">⏭</button>
     </div>
     <div class="offer hidden" id="offer"><b>Opponent offers a draw</b><button class="btn g" id="acc">Accept</button><button class="btn" id="dec">Decline</button></div>
+    <div class="offer hidden" id="tbreq"><b>Opponent asks to take back a move</b><button class="btn g" id="tbacc">Accept</button><button class="btn" id="tbdec">Decline</button></div>
     <div class="acts" id="acts">
+      <button id="bundo"><span>↶</span>Undo</button>
       <button id="bdraw"><span>½</span>Draw</button>
       <button id="bresign"><span>⚑</span>Resign</button>
       <button id="bflip"><span>⇅</span>Flip</button>
@@ -311,7 +341,7 @@ footer a{color:#6b665e}
   </aside>
 </main>
 
-<footer>Pieces: “cburnett” (CC BY-SA 3.0) · sounds: <a href="https://github.com/pychess/pychess" target="_blank" rel="noopener">PyChess</a> (GPL-3.0) · move logic: chess.js · <a href="/privacy">Privacy & terms</a></footer>
+<footer>Pieces: “cburnett” (CC BY-SA 3.0) · sounds: <a href="https://freesound.org/people/el_boss/packs/30764/" target="_blank" rel="noopener">el_boss</a> (CC0) · rules: chess.js &amp; python-chess · <a href="/privacy">Privacy & terms</a></footer>
 <div class="toast" id="toast"></div>
 
 <script type="module">
@@ -323,7 +353,8 @@ const VAL = {p:1,n:3,b:3,r:5,q:9};
 const REASONS = {
   'mats':'Checkmate','pats':'Stalemate','laiks':'Time ran out','padošanās':'Resignation',
   'vienošanās':'Agreement','atkārtošanās':'Threefold repetition',
-  'materiāls':'Insufficient material','50 gājieni':'50-move rule','pārtraukta':'Game aborted'
+  'materiāls':'Insufficient material','50 gājieni':'50-move rule','pārtraukta':'Game aborted',
+  'laiks-materiāls':'Timeout vs insufficient material'
 };
 const store = {
   get(k){ try{ return localStorage.getItem(k) }catch{ return null } },
@@ -348,19 +379,14 @@ const serverApi = api;
 /* ---------- skaņas (bez failiem, ģenerētas) ---------- */
 let actx, master;
 let muted = store.get('gambits:mute') === '1';
-/* ierakstītas šaha skaņas (PyChess, GPL-3.0), ielādētas vienreiz un atskaņotas bez aiztures */
-const SND_FILES = {
-  move:'move1', moveOpp:'mov2', capture:'capture2', castle:'castle', check:'check1',
-  start:'start1', win:'win1', lose:'lose1', draw:'draw1', notify:'choice', premove:'choice', invalid:'invalid',
-};
-const SND_VOL = {premove:.35, notify:.7, invalid:.5};
+/* īsti koka figūru ieraksti (el_boss, Freesound, CC0), ielādēti vienreiz un atskaņoti bez aiztures */
+const SND_NAMES = ['place', 'capture', 'slide', 'start'];
 const buffers = {};
 let loading = null;
 function loadSounds(){
   if(loading || !actx) return loading;
-  const ext = new Audio().canPlayType('audio/ogg; codecs="vorbis"') ? 'ogg' : 'wav';
-  const names = [...new Set(Object.values(SND_FILES))];
-  loading = Promise.all(names.map(async n => {
+  const ext = new Audio().canPlayType('audio/ogg; codecs="vorbis"') ? 'ogg' : 'mp3';
+  loading = Promise.all(SND_NAMES.map(async n => {
     try{
       const data = await (await fetch(`/s/snd_${n}.${ext}`)).arrayBuffer();
       buffers[n] = await new Promise((ok, bad) => actx.decodeAudioData(data, ok, bad));
@@ -381,28 +407,30 @@ function unlockAudio(){
 }
 addEventListener('pointerdown', unlockAudio);
 addEventListener('keydown', unlockAudio);
-function play(kind, delay = 0){
+function play(name, {delay = 0, rate = 1, vol = 1} = {}){
   if(!actx || muted) return;
-  const buf = buffers[SND_FILES[kind]];
+  const buf = buffers[name];
   if(!buf) return;
   const src = actx.createBufferSource(), g = actx.createGain();
-  src.buffer = buf; g.gain.value = SND_VOL[kind] ?? 1;
+  src.buffer = buf; src.playbackRate.value = rate; g.gain.value = vol;
   src.connect(g).connect(master);
   src.start(actx.currentTime + delay);
 }
 const sound = {
-  move(mine = true){ play(mine ? 'move' : 'moveOpp') },
+  // pretinieka gājiens skan nedaudz zemāk, lai pēc dzirdes var atšķirt
+  move(mine = true){ play('place', {rate: mine ? 1 : .93}) },
   capture(){ play('capture') },
-  castle(){ play('castle') },
-  promote(){ play('move'); play('notify', .08) },
-  check(){ play('check') },
-  premove(){ play('premove') },
+  castle(){ play('place', {rate: 1.02}); play('place', {delay: .12, rate: .96, vol: .85}) },
+  promote(){ play('place'); play('slide', {delay: .09, rate: 1.25, vol: .7}) },
+  check(){ play('capture', {rate: 1.28, vol: 1.1}) },
+  premove(){ play('slide', {rate: 1.4, vol: .35}) },
+  illegal(){ play('slide', {rate: .7, vol: .5}) },
   start(){ play('start') },
-  win(){ play('win') },
-  lose(){ play('lose') },
-  draw(){ play('draw') },
-  notify(){ play('notify') },
-  tick(){ play('invalid') },
+  win(){ play('start', {rate: 1.12}) },
+  lose(){ play('start', {rate: .84}) },
+  draw(){ play('start', {rate: .95, vol: .8}) },
+  notify(){ play('slide', {rate: 1.2, vol: .8}) },
+  tick(){ play('slide', {rate: 1.6, vol: .6}) },
 };
 function playFor(m, pos, mine = true){
   if(!m) return;
@@ -431,8 +459,9 @@ function confetti(){
 }
 
 /* galdiņa krāsas */
-const THEMES = [['Wood','#efdcbc','#ad8462'], ['Green','#eeeed2','#769656'], ['Blue','#dee3e6','#8ca2ad'], ['Lilac','#e8e0f0','#9277b0'], ['Marble','#e6e1d8','#8b8378']];
-let theme = +(store.get('gambits:theme') || 0) % THEMES.length;
+// pirmais ir noklusējums: klasiskais zaļais turnīra galdiņš
+const THEMES = [['Green','#ebecd0','#739552'], ['Wood','#efdcbc','#ad8462'], ['Blue','#dee3e6','#8ca2ad'], ['Lilac','#e8e0f0','#9277b0'], ['Marble','#e6e1d8','#8b8378']];
+let theme = +(store.get('gambits:theme2') || 0) % THEMES.length;
 function applyTheme(){
   const [, l, d] = THEMES[theme];
   document.documentElement.style.setProperty('--light', l);
@@ -440,7 +469,7 @@ function applyTheme(){
 }
 applyTheme();
 document.getElementById('btheme').onclick = () => {
-  theme = (theme + 1) % THEMES.length; store.set('gambits:theme', theme); applyTheme();
+  theme = (theme + 1) % THEMES.length; store.set('gambits:theme2', theme); applyTheme();
   toast('Board: ' + THEMES[theme][0]);
 };
 const muteBtn = document.getElementById('bmute');
@@ -477,9 +506,22 @@ function adopt(r){
 async function hello(){
   for(let i=0;;i++){
     try{
-      return adopt(await api('/api/hello', {pid:ME.pid, secret:ME.secret, name:ME.name, friends, removed}));
+      const r = await api('/api/hello', {pid:ME.pid, secret:ME.secret, name:ME.name, friends, removed});
+      // serveris prasa Google pieteikšanos: parāda ieejas logu un mēģina vēlreiz
+      if(r.login){ await gate(); continue; }
+      return adopt(r);
     }catch{ await sleep(Math.min(5000, 800*(i+1))); }
   }
+}
+
+/* --- ieejas logs: bez Google konta spēle netiek atvērta --- */
+let gateDone = null;
+function gate(){
+  const g = document.getElementById('gate');
+  g.classList.remove('hidden');
+  try{ google.accounts.id.renderButton(document.getElementById('gatebtn'), {theme:'filled_blue', shape:'pill', size:'large', text:'continue_with', locale:'en', width: 280}); }catch{}
+  try{ if(store.get('gambits:gseen') === '1') google.accounts.id.prompt(); }catch{}
+  return new Promise(res => { gateDone = res; });
 }
 const isGoogle = () => ME.pid.startsWith('g');
 function drawMe(){
@@ -513,6 +555,8 @@ async function onGoogle(resp){
   if(r.error){ toast(r.error); return; }
   store.set('gambits:gseen', '1');
   adopt(r); LOBBY.v = -1;
+  document.getElementById('gate').classList.add('hidden');
+  if(gateDone){ const f = gateDone; gateDone = null; f(); }
   toast('Welcome, ' + (r.name || 'player') + '!');
   renderSocial();
 }
@@ -521,10 +565,8 @@ async function initGoogle(){
   if(!GCID) return;
   await new Promise((ok, bad) => { const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true; s.onload = ok; s.onerror = bad; document.head.appendChild(s); }).catch(() => {});
   if(!window.google?.accounts?.id) return;
-  google.accounts.id.initialize({client_id: GCID, callback: onGoogle, auto_select: true, cancel_on_tap_outside: true});
+  google.accounts.id.initialize({client_id: GCID, callback: onGoogle, auto_select: true, cancel_on_tap_outside: false});
   drawGoogleBox();
-  // atgriežoties tiek ielogots automātiski, bez klikšķa
-  if(!isGoogle() && store.get('gambits:gseen') === '1') google.accounts.id.prompt();
 }
 function setName(n){
   n = n.trim().slice(0,20);
@@ -653,8 +695,10 @@ document.addEventListener('click', e => {
 
 /* ---------- maršrutēšana ---------- */
 (async () => {
+  await initGoogle();
+  // ar ieslēgtu Google bez konta nekas netiek rādīts, tikai ieejas logs
+  if(GCID && !isGoogle()) await gate();
   await hello();
-  initGoogle();
   const gameId = location.pathname === '/local' ? 'local' : (location.pathname.match(/^\/g\/([a-z0-9]+)/) || [])[1];
   const friendId = (location.pathname.match(/^\/f\/([a-z0-9]+)/) || [])[1];
   if(friendId){
@@ -701,7 +745,7 @@ function initHome(){
     const {minutes, inc, color} = HOME;
     $('#create').disabled = true; $('#create').textContent = 'Creating…';
     try{
-      const r = await api('/api/new', {minutes, inc, color});
+      const r = await api('/api/new', {minutes, inc, color, pid: ME.pid, secret: ME.secret});
       location.href = '/g/' + r.id;
     }catch{
       $('#create').disabled = false; $('#create').textContent = 'Play with a link';
@@ -719,7 +763,7 @@ class LocalGame {
     this.reset();
   }
   reset(){
-    this.gen++; this.moves = []; this.lastMoveAt = null;
+    this.gen++; this.moves = []; this.lastMoveAt = null; this.hist = [];
     this.clock = {w: this.minutes*60000, b: this.minutes*60000};
     this.result = null; this.reason = null;
   }
@@ -744,6 +788,7 @@ class LocalGame {
     if(path === '/api/move'){
       if(this.result) return {error: 'The game is over'};
       const me = this.turn(), t = Date.now();
+      this.hist.push([{...this.clock}, this.lastMoveAt]);
       if(this.running() && this.lastMoveAt) this.clock[me] = Math.max(0, this.clock[me] - (t - this.lastMoveAt)) + this.inc*1000;
       this.moves.push(d.uci); this.lastMoveAt = t;
       if(d.end) this.finish(d.end.result, d.end.reason); else this.bump();
@@ -756,6 +801,12 @@ class LocalGame {
       else if(d.type === 'abort' && !this.result) this.finish('*', 'pārtraukta');
       else if(d.type === 'draw_offer' && !this.result) this.finish('1/2-1/2', 'vienošanās');
       else if(d.type === 'rematch'){ this.reset(); this.bump(); }
+      else if(d.type === 'takeback' && !this.result && this.moves.length){
+        // uz vienas ierīces atsaukšana notiek uzreiz, bez otra apstiprinājuma
+        this.moves.pop(); [this.clock, this.lastMoveAt] = this.hist.pop();
+        if(this.lastMoveAt) this.lastMoveAt = Date.now();
+        this.bump();
+      }
       return {ok: true};
     }
     return {error: 'Not available offline'};
@@ -955,11 +1006,18 @@ function initGame(id){
 
   function drawMoves(){
     const h = S.chess.history(), cur = live() ? h.length : S.view;
+    // figūru notācija: burta vietā maza figūras ikona (N → zirdziņš u.t.t.)
+    const FIG = {K:'king', Q:'queen', R:'rook', B:'bishop', N:'knight'};
+    const fig = (san, white) => {
+      const col = white ? 'white' : 'black';
+      san = san.replace(/=([QRBN])/, (_, p) => `=<piece class="fig ${FIG[p]} ${col}"></piece>`);
+      return FIG[san[0]] ? `<piece class="fig ${FIG[san[0]]} ${col}"></piece>${san.slice(1)}` : san;
+    };
     let html = '';
     for(let i=0;i<h.length;i+=2){
       html += `<div class="mrow"><span class="n">${i/2+1}.</span>
-        <span class="mv ${cur===i+1?'cur':''}" data-p="${i+1}">${h[i]}</span>
-        ${h[i+1] ? `<span class="mv ${cur===i+2?'cur':''}" data-p="${i+2}">${h[i+1]}</span>` : '<span></span>'}</div>`;
+        <span class="mv ${cur===i+1?'cur':''}" data-p="${i+1}">${fig(h[i], true)}</span>
+        ${h[i+1] ? `<span class="mv ${cur===i+2?'cur':''}" data-p="${i+2}">${fig(h[i+1], false)}</span>` : '<span></span>'}</div>`;
     }
     const m = $('#moves'), atEnd = m.scrollTop + m.clientHeight >= m.scrollHeight - 30;
     m.innerHTML = html || '<div style="padding:14px;color:var(--muted)">No moves yet</div>';
@@ -989,6 +1047,10 @@ function initGame(id){
     $('#bdraw').disabled = !playing || early || st.drawOffer === S.me;
     $('#bdraw').innerHTML = st.drawOffer === S.me ? '<span>½</span>Offered' : '<span>½</span>Draw';
     $('#offer').classList.toggle('hidden', !(playing && st.drawOffer && st.drawOffer !== S.me));
+    const hasMoves = S.chess.history().length > 0;
+    $('#bundo').disabled = !playing || !hasMoves || (!localMode && st.takeback === S.me);
+    $('#bundo').innerHTML = !localMode && st.takeback === S.me ? '<span>↶</span>Asked' : '<span>↶</span>Undo';
+    $('#tbreq').classList.toggle('hidden', !(playing && !localMode && st.takeback && st.takeback !== S.me));
     const tc = st.minutes === 0 ? 'No clock' : `${st.minutes} min` + (st.inc ? ` | ${st.inc} s` : '');
     $('#tcb').textContent = tc;
     $('#hdrinfo').textContent = localMode ? 'Same device' : S.me ? `You play ${S.me==='w'?'White':'Black'}` : 'Spectator';
@@ -1072,8 +1134,11 @@ function initGame(id){
     if(st.gen !== S.gen){ S.gen = st.gen; S.minPly = 0; S.premove = null; S.marks = []; }
     const local = S.chess.history({verbose:true}).map(m => m.from+m.to+(m.promotion||''));
     const same = local.length === st.moves.length && local.every((m,i)=>m===st.moves[i]);
+    // kad serveris apstiprina manu gājienu, sargs vairs nav vajadzīgs (citādi bloķētu atsaukšanu)
+    if(st.moves.length >= S.minPly) S.minPly = 0;
     // serveris vēl nav redzējis manu gājienu: neatceļ to un neanimē otrreiz
     const stale = st.moves.length < S.minPly;
+    const tookBack = !stale && st.moves.length < local.length && local.slice(0, st.moves.length).every((m,i)=>m===st.moves[i]);
     let anim = false;
     if(!same && !S.pending && !stale){
       const isNext = st.moves.length === local.length+1 && local.every((m,i)=>m===st.moves[i]);
@@ -1082,9 +1147,11 @@ function initGame(id){
       S.chess = c; S.sel = null; S.targets = [];
       if(isNext){ anim = true; if(live()){ const lm = c.history({verbose:true}).pop(); playFor(lm, c, lm.color === S.me); } }
       if(S.view !== null && S.view > c.history().length) S.view = null;
-      if(st.moves.length === 0 && local.length > 0){ S.view = null; sound.start(); }
+      if(tookBack && st.gen === prev?.gen){ S.premove = null; sound.premove(); toast('Move taken back'); }
+      else if(st.moves.length === 0 && local.length > 0){ S.view = null; sound.start(); }
       S.minPly = 0;
     }
+    if(prev && st.takeback && st.takeback !== S.me && prev.takeback !== st.takeback && !localMode){ sound.notify(); toast('Your opponent asks to take back a move'); }
     if(prev && prev.result && !st.result) sound.start();
     if(prev && !prev.result && st.result){
       S.showResult = true; S.premove = null;
@@ -1145,6 +1212,15 @@ function initGame(id){
     drawBoard(false);
   }
   function tryMove(from, to, animate){
+    // rokāde, uzspiežot vai uzvelkot karali uz sava torņa
+    const pf = S.chess.get(from), pt = S.chess.get(to);
+    if(pf?.type === 'k' && pt?.type === 'r' && pt.color === pf.color){
+      const side = to[0] > from[0] ? 'k' : 'q';
+      const list = myTurn() ? S.chess.moves({square:from, verbose:true}) : premoveTargets(from);
+      const cm = list.find(m => m.flags.includes(side));
+      if(!cm) return false;
+      to = cm.to;
+    }
     if(!myTurn()){
       if(!premoveTargets(from).some(m => m.to === to)) return false;
       S.premove = {from, to}; S.sel = null; S.targets = [];
@@ -1250,7 +1326,14 @@ function initGame(id){
     d.g.remove(); d.src?.classList.remove('dragging');
     d.hover && squares[d.hover]?.classList.remove('hov');
     const sq = e.type === 'pointerup' ? sqAt(e.clientX, e.clientY) : null;
-    if(sq && sq !== d.from && d.moved){ if(!tryMove(d.from, sq, false)){ S.sel = null; S.targets = []; drawBoard(false); } }
+    if(sq && sq !== d.from && d.moved){
+      if(!tryMove(d.from, sq, false)){
+        // nelegāls gājiens: figūra atgriežas, galdiņš viegli notrīc
+        S.sel = null; S.targets = []; drawBoard(false);
+        sound.illegal();
+        const w = $('#bwrap'); w.classList.remove('shake'); void w.offsetWidth; w.classList.add('shake');
+      }
+    }
     else if(sq === d.from && d.again && !d.moved) select(null);
   };
   $('#board').addEventListener('pointerup', endDrag);
@@ -1296,6 +1379,12 @@ function initGame(id){
     if(localMode){ if(confirm('Agree to a draw?')) api('/api/action', {id:S.id, token:S.token, type:'draw_offer'}); return; }
     api('/api/action', {id:S.id, token:S.token, type:'draw_offer'}); toast('Draw offered');
   };
+  $('#bundo').onclick = () => {
+    api('/api/action', {id:S.id, token:S.token, type:'takeback'});
+    if(!localMode) toast('Takeback requested');
+  };
+  $('#tbacc').onclick = () => api('/api/action', {id:S.id, token:S.token, type:'takeback_accept'});
+  $('#tbdec').onclick = () => api('/api/action', {id:S.id, token:S.token, type:'takeback_decline'});
   $('#acc').onclick = () => api('/api/action', {id:S.id, token:S.token, type:'draw_offer'});
   $('#dec').onclick = () => api('/api/action', {id:S.id, token:S.token, type:'draw_decline'});
   $('#chatform').onsubmit = e => {

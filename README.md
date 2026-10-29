@@ -22,5 +22,5 @@ Then open http://localhost:8000
 ## Credits
 
 - Pieces: "cburnett" set (CC BY-SA 3.0)
-- Sounds: [PyChess](https://github.com/pychess/pychess) (GPL-3.0)
-- Move logic: [chess.js](https://github.com/jhlywa/chess.js)
+- Sounds: "Chess Puzzle Blitz SFX" by [el_boss](https://freesound.org/people/el_boss/packs/30764/) (CC0)
+- Rules: [chess.js](https://github.com/jhlywa/chess.js) in the browser, [python-chess](https://github.com/niklasf/python-chess) on the server (the server is the referee)
