@@ -521,6 +521,23 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"googleClientId": GOOGLE_CLIENT_ID})
         if url.path.startswith("/p/"):
             return self.send_piece(url.path[3:])
+        # instalējamā lietotne (PWA) un Android APK sasaiste
+        app_files = {"/manifest.webmanifest": "application/manifest+json", "/sw.js": "text/javascript",
+                     "/icon-192.png": "image/png", "/icon-512.png": "image/png", "/icon-512-maskable.png": "image/png"}
+        if url.path in app_files:
+            name = url.path[1:]
+            return self.send_file([os.path.join(ROOT, "public", name), os.path.join(ROOT, name)], app_files[url.path])
+        if url.path == "/.well-known/assetlinks.json":
+            links = os.environ.get("ASSETLINKS", "").strip()
+            if links:
+                body = links.encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            return self.send_file([os.path.join(ROOT, "assetlinks.json")], "application/json")
         if url.path == "/api/profile":
             # spēlētāja profils: reitingi pa kategorijām un pēdējās spēles
             q = {k: v[0] for k, v in parse_qs(url.query).items()}

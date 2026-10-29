@@ -4,8 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Gambit — Chess with Friends</title>
-<meta name="theme-color" content="#211f1c">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♞</text></svg>">
+<meta name="theme-color" content="#302e2b">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
 :root{
   --bg:#302e2b; --panel:#262522; --panel2:#3a3835; --line:#3f3d39;
@@ -645,7 +650,8 @@ function gate(){
   const g = document.getElementById('gate');
   g.classList.remove('hidden');
   try{ google.accounts.id.renderButton(document.getElementById('gatebtn'), {theme:'filled_blue', shape:'pill', size:'large', text:'continue_with', locale:'en', width: 280}); }catch{}
-  try{ if(store.get('gambits:gseen') === '1') google.accounts.id.prompt(); }catch{}
+  // One Tap: atgriežoties ar to pašu Google kontu ielogo automātiski, citādi piedāvā vienu klikšķi
+  try{ google.accounts.id.prompt(); }catch{}
   return new Promise(res => { gateDone = res; });
 }
 const isGoogle = () => ME.pid.startsWith('g');
@@ -820,6 +826,8 @@ document.addEventListener('click', e => {
 
 /* ---------- maršrutēšana ---------- */
 (async () => {
+  // instalējamā lietotne: service worker ikonai, kešam un bezsaistes paziņojumam
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
   await initGoogle();
   // ar ieslēgtu Google bez konta nekas netiek rādīts, tikai ieejas logs
   if(GCID && !isGoogle()) await gate();
