@@ -21,6 +21,7 @@ Then open http://localhost:8000
 
 ## Credits
 
-- Pieces: "cburnett" set (CC BY-SA 3.0)
-- Sounds: "Chess Puzzle Blitz SFX" by [el_boss](https://freesound.org/people/el_boss/packs/30764/) (CC0)
+- Piece sets (files `pc_<set>_<piece>.svg`) from [lichess](https://github.com/lichess-org/lila/blob/master/COPYING.md): Staunty, Maestro, Cardinal by sadsnake1 and California by Jerry S. (CC BY-NC-SA 4.0, non-commercial), Cburnett by Colin M.L. Burnett and Merida by Armando Hernandez Marroquin (GPLv2+), Chessnut by Alexis Luengas (Apache 2.0)
+- Sounds (all CC0, Freesound): "Wood" and "Crisp" sets trimmed and normalized from recordings by [JJTaynos](https://freesound.org/people/JJTaynos/sounds/733927/) and [Amatsuuu](https://freesound.org/people/Amatsuuu/sounds/629182/); "Classic" set by [el_boss](https://freesound.org/people/el_boss/packs/30764/)
+- Data: ratings, friends and game history are stored in SQLite under `DATA_DIR` (default `./data`)
 - Rules: [chess.js](https://github.com/jhlywa/chess.js) in the browser, [python-chess](https://github.com/niklasf/python-chess) on the server (the server is the referee)

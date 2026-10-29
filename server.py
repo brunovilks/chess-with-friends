@@ -7,7 +7,9 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import secrets
+import sqlite3
 import threading
 import time
 import urllib.request
@@ -27,6 +29,7 @@ if not os.path.exists(INDEX):
 GAME_TTL = 24 * 3600          # neaktīvas spēles dzēš pēc 24 h
 POLL_WAIT = 20                # long-poll gaidīšana sekundēs
 ONLINE_WINDOW = 25            # cik sekundes skaitās "tiešsaistē"
+ABANDON = 45                  # pēc cik sekundēm prombūtnes var pieprasīt uzvaru
 
 PRIVACY_HTML = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>Gambit — Privacy & Terms</title>
@@ -45,7 +48,10 @@ settings in local storage on your own device.</p>
 <p>Sign out and clear this site's data in your browser. Server-side data disappears on the next restart.</p>
 <h2>Terms</h2>
 <p>Gambit is provided as is, free of charge and without any guarantee. Be respectful in chat. Open-source credits:
-pieces "cburnett" (CC BY-SA 3.0), sounds by el_boss on Freesound (CC0), rules chess.js and python-chess.</p>
+piece sets from lichess (CC BY-NC-SA 4.0 / GPLv2+ / Apache 2.0, see the project README), sounds from Freesound
+(CC0), rules chess.js and python-chess.</p>
+<h2>Ratings</h2>
+<p>Rated games store your player ID, rating and the moves of the game so you can see your history.</p>
 </body></html>"""
 
 games = {}
@@ -87,7 +93,12 @@ class Game:
         self.reason = None
         self.draw_offer = None   # krāsa, kas piedāvā
         self.takeback = None     # krāsa, kas lūdz atsaukt gājienu
+        self.rating_change = None
         self.rematch = set()
+
+    def pid_of(self, c):
+        tok = self.seats.get(c)
+        return next((q for q, pl in list(players.items()) if tok and pl["secret"] == tok), None)
 
     def judge(self):
         """Pēc gājiena: mats, pats un automātiskie neizšķirti (kā chess.com)."""
@@ -148,6 +159,12 @@ class Game:
         self.result = result
         self.reason = reason
         self.draw_offer = None
+        self.takeback = None
+        try:
+            self.rating_change = rate_game(self)
+        except Exception as e:   # reitinga kļūda nedrīkst sabojāt pašu spēli
+            print("rating error:", e, flush=True)
+            self.rating_change = None
         self.bump()
         with lobby:
             bump_lobby()
@@ -159,7 +176,13 @@ class Game:
 
     def state(self, token=None):
         t = time.time()
+        cat = category(self.minutes, self.inc)
+        pids = {c: self.pid_of(c) for c in ("w", "b")}
+        rated = bool(cat and all(p and p.startswith("g") for p in pids.values()))
         return {
+            "cat": cat,
+            "rated": rated,
+            "ratingChange": self.rating_change,
             "id": self.id,
             "v": self.version,
             "gen": self.gen,
@@ -175,10 +198,13 @@ class Game:
             "rematch": sorted(self.rematch),
             "players": {
                 c: {
-                    "pid": next((q for q, pl in list(players.items()) if self.seats[c] and pl["secret"] == self.seats[c]), None),
+                    "pid": pids[c],
                     "taken": self.seats[c] is not None,
                     "name": self.names[c],
                     "online": t - self.seen[c] < ONLINE_WINDOW,
+                    "away": round(t - self.seen[c]) if self.seen[c] else 0,
+                    "rating": get_rating(pids[c], cat)["rating"] if cat and pids[c] and pids[c].startswith("g") else None,
+                    "picture": load_account(pids[c])["picture"] if pids[c] and pids[c].startswith("g") else "",
                 }
                 for c in ("w", "b")
             },
@@ -209,8 +235,105 @@ lobby_v = [0]
 PID_OK = set("abcdefghjkmnpqrstuvwxyz23456789")
 
 
-accounts = {}       # Google spēlētāja pid -> {"friends": {pid: vārds}, "picture": url}
+accounts = {}       # kešatmiņa: Google spēlētāja pid -> {"friends": {pid: vārds}, "picture": url}
 ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"
+
+# --- pastāvīgā datubāze: konti, draugi, reitingi, spēļu vēsture ---
+DATA_DIR = os.environ.get("DATA_DIR") or os.path.join(ROOT, "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+db = sqlite3.connect(os.path.join(DATA_DIR, "gambit.db"), check_same_thread=False)
+db_lock = threading.Lock()
+with db_lock:
+    db.executescript("""
+    CREATE TABLE IF NOT EXISTS users(pid TEXT PRIMARY KEY, name TEXT, picture TEXT,
+        friends TEXT DEFAULT '{}', created REAL);
+    CREATE TABLE IF NOT EXISTS ratings(pid TEXT, cat TEXT, rating REAL, games INT, w INT, d INT, l INT,
+        best REAL, PRIMARY KEY(pid, cat));
+    CREATE TABLE IF NOT EXISTS games(id TEXT, white TEXT, black TEXT, cat TEXT, minutes INT, inc INT,
+        result TEXT, reason TEXT, moves TEXT, wdelta INT, bdelta INT, wrating INT, brating INT, ended REAL);
+    CREATE INDEX IF NOT EXISTS games_w ON games(white);
+    CREATE INDEX IF NOT EXISTS games_b ON games(black);
+    """)
+    db.commit()
+
+START_RATING = 1200
+CATS = ("bullet", "blitz", "rapid", "classical")
+
+
+def db_all(sql, *args):
+    with db_lock:
+        return db.execute(sql, args).fetchall()
+
+
+def db_run(sql, *args):
+    with db_lock:
+        db.execute(sql, args)
+        db.commit()
+
+
+def category(minutes, inc):
+    # tāpat kā lielajās šaha vietnēs: paredzamais spēles ilgums = laiks + 40 × papildlaiks
+    if not minutes:
+        return None
+    est = minutes * 60 + 40 * inc
+    if est < 180:
+        return "bullet"
+    if est < 600:
+        return "blitz"
+    if est < 1800:
+        return "rapid"
+    return "classical"
+
+
+def get_rating(pid, cat):
+    rows = db_all("SELECT rating, games, w, d, l, best FROM ratings WHERE pid=? AND cat=?", pid, cat)
+    if rows:
+        r = rows[0]
+        return {"rating": round(r[0]), "games": r[1], "w": r[2], "d": r[3], "l": r[4], "best": round(r[5])}
+    return {"rating": START_RATING, "games": 0, "w": 0, "d": 0, "l": 0, "best": START_RATING}
+
+
+def save_user(pid, name=None, picture=None):
+    if not pid.startswith("g"):
+        return
+    db_run("INSERT INTO users(pid, name, picture, created) VALUES(?,?,?,?) "
+           "ON CONFLICT(pid) DO UPDATE SET name=COALESCE(excluded.name, users.name), "
+           "picture=COALESCE(excluded.picture, users.picture)", pid, name, picture, time.time())
+
+
+def load_account(pid):
+    if pid not in accounts:
+        rows = db_all("SELECT friends, picture FROM users WHERE pid=?", pid)
+        friends = json.loads(rows[0][0] or "{}") if rows else {}
+        accounts[pid] = {"friends": friends, "picture": (rows[0][1] or "") if rows else ""}
+    return accounts[pid]
+
+
+def rate_game(game):
+    """Elo reitinga aprēķins pēc reitingotas spēles. Atgriež {'w': ±n, 'b': ±n} vai None."""
+    cat = category(game.minutes, game.inc)
+    if not cat or game.result not in ("1-0", "0-1", "1/2-1/2") or len(game.moves) < 2:
+        return None
+    wp, bp = game.pid_of("w"), game.pid_of("b")
+    if not (wp and bp and wp.startswith("g") and bp.startswith("g") and wp != bp):
+        return None
+    rw, rb = get_rating(wp, cat), get_rating(bp, cat)
+    sw = {"1-0": 1.0, "0-1": 0.0, "1/2-1/2": 0.5}[game.result]
+    ew = 1 / (1 + 10 ** ((rb["rating"] - rw["rating"]) / 400))
+    k = lambda r: 40 if r["games"] < 30 else 20   # jauniem spēlētājiem reitings mainās ātrāk
+    dw = round(k(rw) * (sw - ew))
+    db_ = round(k(rb) * ((1 - sw) - (1 - ew)))
+    for pid, r, d, s in ((wp, rw, dw, sw), (bp, rb, db_, 1 - sw)):
+        new = r["rating"] + d
+        db_run("INSERT INTO ratings(pid, cat, rating, games, w, d, l, best) VALUES(?,?,?,?,?,?,?,?) "
+               "ON CONFLICT(pid, cat) DO UPDATE SET rating=excluded.rating, games=excluded.games, "
+               "w=excluded.w, d=excluded.d, l=excluded.l, best=excluded.best",
+               pid, cat, new, r["games"] + 1, r["w"] + (s == 1), r["d"] + (s == 0.5), r["l"] + (s == 0),
+               max(r["best"], new))
+    db_run("INSERT INTO games VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)", f"{game.id}-{game.gen}", wp, bp, cat,
+           game.minutes, game.inc, game.result, game.reason, " ".join(game.moves), dw, db_,
+           rw["rating"] + dw, rb["rating"] + db_, time.time())
+    return {"w": dw, "b": db_}
 
 
 def google_pid(sub):
@@ -253,7 +376,8 @@ def token_ok(token):
 
 
 def merge_friends(pid, add, remove):
-    acc = accounts.setdefault(pid, {"friends": {}, "picture": ""})
+    acc = load_account(pid)
+    before = dict(acc["friends"])
     if isinstance(add, dict):
         for q, n in list(add.items())[:500]:
             q = str(q)
@@ -262,6 +386,9 @@ def merge_friends(pid, add, remove):
     if isinstance(remove, list):
         for q in remove[:500]:
             acc["friends"].pop(str(q), None)
+    if acc["friends"] != before:
+        save_user(pid)
+        db_run("UPDATE users SET friends=? WHERE pid=?", json.dumps(acc["friends"]), pid)
     return acc["friends"]
 
 
@@ -329,24 +456,35 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def send_sound(self, name):
-        # tikai skaņu faili ar drošu nosaukumu: snd_<vārds>.ogg vai .wav
-        base, _, ext = name.rpartition(".")
-        if ext not in ("ogg", "mp3") or not base.startswith("snd_") or not base[4:].isalnum():
-            return self.send_json({"error": "Not found"}, 404)
-        for folder in (os.path.join(ROOT, "sounds"), ROOT):
-            path = os.path.join(folder, name)
+    def send_file(self, paths, ctype):
+        for path in paths:
             if os.path.isfile(path):
                 with open(path, "rb") as f:
                     body = f.read()
                 self.send_response(200)
-                self.send_header("Content-Type", "audio/ogg" if ext == "ogg" else "audio/mpeg")
+                self.send_header("Content-Type", ctype)
                 self.send_header("Content-Length", str(len(body)))
                 self.send_header("Cache-Control", "public, max-age=604800")
                 self.end_headers()
                 self.wfile.write(body)
                 return
         self.send_json({"error": "Not found"}, 404)
+
+    def send_sound(self, name):
+        # tikai skaņu faili ar drošu nosaukumu, piem. snd_start.ogg vai wood_move.wav
+        if not re.fullmatch(r"(snd_[a-z]+\.(ogg|mp3))|((wood|crisp)_[a-z]+\.wav)", name):
+            return self.send_json({"error": "Not found"}, 404)
+        ctype = {"ogg": "audio/ogg", "mp3": "audio/mpeg", "wav": "audio/wav"}[name.rsplit(".", 1)[1]]
+        self.send_file([os.path.join(ROOT, "sounds", name), os.path.join(ROOT, name)], ctype)
+
+    def send_piece(self, rest):
+        # figūru komplekti: /p/<komplekts>/<wK>.svg; GitHub repozitorijā tie glabājas kā pc_<komplekts>_<wK>.svg
+        m = re.fullmatch(r"([a-z]+)/([wb][KQRBNP])\.svg", rest)
+        if not m:
+            return self.send_json({"error": "Not found"}, 404)
+        s, p = m.groups()
+        self.send_file([os.path.join(ROOT, "pieces", s, p + ".svg"), os.path.join(ROOT, f"pc_{s}_{p}.svg")],
+                       "image/svg+xml")
 
     def read_json(self):
         n = int(self.headers.get("Content-Length") or 0)
@@ -381,6 +519,29 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"ok": True, "games": len(games)})
         if url.path == "/api/config":
             return self.send_json({"googleClientId": GOOGLE_CLIENT_ID})
+        if url.path.startswith("/p/"):
+            return self.send_piece(url.path[3:])
+        if url.path == "/api/profile":
+            # spēlētāja profils: reitingi pa kategorijām un pēdējās spēles
+            q = {k: v[0] for k, v in parse_qs(url.query).items()}
+            if not token_ok(q.get("token", "")):
+                return self.send_json({"error": "Sign in with Google", "login": True}, 401)
+            pid = q.get("pid", "")
+            rows = db_all("SELECT name, picture FROM users WHERE pid=?", pid)
+            if not rows:
+                return self.send_json({"error": "Player not found"}, 404)
+            recent = []
+            for g in db_all("SELECT white, black, cat, result, reason, wdelta, bdelta, wrating, brating, ended "
+                            "FROM games WHERE white=? OR black=? ORDER BY ended DESC LIMIT 20", pid, pid):
+                me_w = g[0] == pid
+                opp = g[1] if me_w else g[0]
+                on = db_all("SELECT name FROM users WHERE pid=?", opp)
+                res = "draw" if g[3] == "1/2-1/2" else ("win" if (g[3] == "1-0") == me_w else "loss")
+                recent.append({"opp": opp, "oppName": on[0][0] if on else "Player", "color": "w" if me_w else "b",
+                               "cat": g[2], "res": res, "reason": g[4], "delta": g[5] if me_w else g[6],
+                               "rating": g[7] if me_w else g[8], "ended": g[9]})
+            return self.send_json({"pid": pid, "name": rows[0][0], "picture": rows[0][1],
+                                   "ratings": {c: get_rating(pid, c) for c in CATS}, "recent": recent})
         if url.path == "/api/lobby":
             q = {k: v[0] for k, v in parse_qs(url.query).items()}
             since = int(q.get("since", "-1") or -1)
@@ -445,6 +606,19 @@ class Handler(BaseHTTPRequestHandler):
                 games[game.id] = game
             return self.send_json({"id": game.id})
 
+        if path == "/api/ratings":
+            # draugu līderu tabulai: vārds, attēls un reitingi vairākiem spēlētājiem
+            if not token_ok(str(data.get("token", ""))):
+                return self.send_json({"error": "Sign in with Google", "login": True}, 401)
+            out = {}
+            for pid in [str(p) for p in (data.get("pids") or [])][:200]:
+                rows = db_all("SELECT name, picture FROM users WHERE pid=?", pid)
+                if rows:
+                    out[pid] = {"name": rows[0][0], "picture": rows[0][1],
+                                "ratings": {c: get_rating(pid, c)["rating"] for c in CATS},
+                                "games": {c: get_rating(pid, c)["games"] for c in CATS}}
+            return self.send_json(out)
+
         if path.startswith("/api/hello") or path.startswith("/api/challenge") or path == "/api/google":
             if path == "/api/google":
                 # tīkla pieprasījums Google — ārpus slēdzenes, lai citi negaida
@@ -496,6 +670,7 @@ class Handler(BaseHTTPRequestHandler):
             p["seen"] = time.time()
             out = {"pid": pid, "secret": p["secret"], "name": p["name"]}
             if pid.startswith("g"):
+                save_user(pid, p["name"] or None)
                 out["friends"] = merge_friends(pid, data.get("friends"), data.get("removed"))
                 out["picture"] = accounts[pid].get("picture", "")
             bump_lobby()
@@ -514,6 +689,7 @@ class Handler(BaseHTTPRequestHandler):
                 p["name"] = name or str(info.get("given_name") or info.get("name") or "Player")[:20]
             friends = merge_friends(pid, data.get("friends"), data.get("removed"))
             accounts[pid]["picture"] = str(info.get("picture", ""))[:500]
+            save_user(pid, p["name"], accounts[pid]["picture"])
             p["seen"] = time.time()
             bump_lobby()
             return self.send_json({"pid": pid, "secret": p["secret"], "name": p["name"],
@@ -670,6 +846,10 @@ class Handler(BaseHTTPRequestHandler):
             elif game.takeback != me:
                 game.takeback = me
                 game.bump()
+        elif kind == "claim" and not game.result and len(game.moves) >= 2:
+            # pretinieks pameta spēli: pēc ABANDON sekundēm var pieprasīt uzvaru
+            if time.time() - game.seen[other] > ABANDON:
+                game.finish("1-0" if me == "w" else "0-1", "pamesta")
         elif kind == "takeback_accept" and game.takeback == other and not game.result:
             self.do_takeback(game, other)
         elif kind == "takeback_decline" and game.takeback == other:

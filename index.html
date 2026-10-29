@@ -6,18 +6,17 @@
 <title>Gambit — Chess with Friends</title>
 <meta name="theme-color" content="#211f1c">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♞</text></svg>">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chessground@9.1.1/assets/chessground.cburnett.css">
 <style>
 :root{
-  --bg:#211f1c; --panel:#2b2925; --panel2:#33302b; --line:#3d3a35;
-  --text:#ece8e1; --muted:#9d978d; --accent:#7fb24a; --accent2:#93c95a;
-  --light:#efdcbc; --dark:#ad8462;
-  --last:rgba(240,215,60,.48); --sel:rgba(240,215,60,.62);
-  --red:#e0574b;
+  --bg:#302e2b; --panel:#262522; --panel2:#3a3835; --line:#3f3d39;
+  --text:#ffffff; --muted:#a7a5a1; --accent:#81b64c; --accent2:#95c86a; --accent-sh:#45753c;
+  --light:#ebecd0; --dark:#739552;
+  --last:rgba(255,255,51,.5); --sel:rgba(255,255,51,.62);
+  --red:#e05a4e; --gold:#f2c46b; --anim:.2s;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
-body{background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font:15px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 input{font:inherit;color:inherit}
 a{color:var(--accent2)}
@@ -53,9 +52,9 @@ header .sp{flex:1}
 .colors button small{display:block;font-size:12px;color:var(--muted);font-weight:500}
 .field{width:100%;background:var(--panel2);border:2px solid transparent;border-radius:9px;padding:11px 12px;outline:none}
 .field:focus{border-color:var(--accent)}
-.big{width:100%;margin-top:20px;background:var(--accent);color:#16200c;font-weight:800;font-size:18px;padding:14px;border-radius:11px;box-shadow:0 4px 0 #5d8a32;transition:.1s}
+.big{width:100%;margin-top:20px;background:var(--accent);color:#fff;font-weight:800;font-size:20px;padding:16px;border-radius:12px;box-shadow:0 5px 0 var(--accent-sh);transition:.1s;text-shadow:0 1px 1px rgba(0,0,0,.25)}
 .big:hover{background:var(--accent2)}
-.big:active{transform:translateY(3px);box-shadow:0 1px 0 #5d8a32}
+.big:active{transform:translateY(4px);box-shadow:0 1px 0 var(--accent-sh)}
 .big:disabled{opacity:.6}
 
 :root{--arrow:rgba(255,170,0,.82);--pre:rgba(214,79,60,.55)}
@@ -66,7 +65,51 @@ header .sp{flex:1}
 piece.ghosted{opacity:.55}
 #marks,#fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:6}
 #fx{z-index:40}
-.anim{transition:transform .2s cubic-bezier(.25,.8,.35,1)!important}
+.anim{transition:transform var(--anim) cubic-bezier(.25,.8,.35,1)!important}
+/* iestatījumi */
+body.nolegal .sq.tgt::after{display:none}
+body.nocoords .sq .cf,body.nocoords .sq .cr{display:none}
+.hbtn.gear{font-size:19px}
+.ocard.settings{max-width:520px;width:100%;text-align:left;max-height:88vh;overflow:auto}
+.ocard.settings .label{text-align:left}
+.settings h3{margin:0 0 14px;font-size:22px}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.srow b{font-weight:600}
+.srow small{display:block;color:var(--muted);font-size:12px;font-weight:400}
+.swatches,.psets,.ssets{display:flex;gap:8px;flex-wrap:wrap;padding:6px 0 12px}
+.swatch{width:44px;height:44px;border-radius:8px;overflow:hidden;display:grid;grid-template-columns:1fr 1fr;border:3px solid transparent}
+.swatch i:nth-child(1),.swatch i:nth-child(4){background:var(--l)}.swatch i:nth-child(2),.swatch i:nth-child(3){background:var(--d)}
+.swatch.on,.pset.on,.sset.on{border-color:var(--accent)}
+.pset{width:52px;height:52px;border-radius:10px;background:var(--panel2);border:3px solid transparent;background-size:80%;background-position:center;background-repeat:no-repeat}
+.sset{padding:8px 14px;border-radius:999px;background:var(--panel2);border:2px solid transparent;font-weight:600}
+.toggle{width:46px;height:26px;border-radius:999px;background:#55524d;position:relative;flex:none;transition:.15s}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.15s}
+.toggle.on{background:var(--accent)}.toggle.on::after{left:23px}
+input[type=range]{accent-color:var(--accent);width:150px}
+select.sel{background:var(--panel2);border:0;border-radius:8px;padding:7px 10px;color:var(--text);font:inherit}
+/* reitingi un profils */
+.rating{color:var(--muted);font-weight:500;margin-left:4px}
+.ratings{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.rtile{background:var(--panel2);border-radius:10px;padding:10px 6px;text-align:center}
+.rtile .ic{font-size:18px}.rtile b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.rtile small{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.recent{display:grid;gap:4px;margin-top:10px}
+.rg{display:grid;grid-template-columns:22px 1fr auto auto;gap:8px;align-items:center;padding:7px 8px;border-radius:8px;background:var(--panel2);font-size:14px}
+.rg .res{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-weight:800;font-size:12px}
+.res.win{background:var(--accent);color:#fff}.res.loss{background:var(--red);color:#fff}.res.draw{background:#7c7a76;color:#fff}
+.delta.up{color:var(--accent2)}.delta.down{color:var(--red)}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs button{padding:6px 12px;border-radius:999px;background:var(--panel2);font-size:13px;font-weight:600;color:var(--muted)}
+.tabs button.on{background:var(--accent);color:#fff}
+.lb{display:grid;gap:4px}
+.lbr{display:grid;grid-template-columns:24px 32px 1fr auto;gap:10px;align-items:center;padding:7px 8px;border-radius:8px;background:var(--panel2)}
+.lbr.me{outline:2px solid var(--accent)}
+.lbr .pos{color:var(--muted);font-weight:700;text-align:center}
+.lbr img,.lbr .ava{width:32px;height:32px;border-radius:7px}
+.rchange{font-size:22px;font-weight:800;margin:4px 0 10px}
+.rchange.up{color:var(--accent2)}.rchange.down{color:var(--red)}
+.abandon{margin:0 8px 8px;padding:10px;border-radius:9px;background:#4a3324;display:flex;align-items:center;gap:8px;font-size:14px}
+.abandon b{flex:1}
 piece.ghost{filter:drop-shadow(0 8px 10px rgba(0,0,0,.45));transform:scale(1.12)!important}
 .mine piece.me:hover{filter:brightness(1.06)}
 /* turnīra stila iezīmes: pēdējais gājiens, izvēle, iespējamie gājieni */
@@ -204,7 +247,8 @@ piece.dragging{opacity:.3}
 .mv{padding:6px 8px;border-radius:5px;cursor:pointer;font-weight:600;text-align:left}
 .mv:hover{background:#3d3a34}
 .mv.cur{background:#4a5a35}
-.nav{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:8px;border-top:1px solid var(--line)}
+.nav{display:grid;grid-template-columns:repeat(4,1fr) 1.2fr;gap:4px;padding:8px;border-top:1px solid var(--line)}
+.nav #bpgn{font-size:12px;font-weight:700}
 .nav button{background:var(--panel2);border-radius:7px;padding:8px 0;font-size:16px}
 .nav button:hover{background:#45413a}
 .acts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:0 8px 8px}
@@ -250,7 +294,9 @@ footer a{color:#6b665e}
   <div class="pill" id="hdrinfo">Chess with friends</div>
   <button class="hbtn" id="btheme" title="Board color" aria-label="Change board color">🎨</button>
   <button class="hbtn" id="bmute" title="Sound" aria-label="Toggle sound">🔊</button>
+  <button class="hbtn gear" id="bset" title="Settings" aria-label="Settings">⚙</button>
 </header>
+<div class="modal hidden" id="setm"></div>
 
 <!-- SĀKUMLAPA -->
 <main id="home" class="hidden">
@@ -289,6 +335,21 @@ footer a{color:#6b665e}
     <div id="friends"></div>
     <div id="onlinewrap" class="hidden"><div class="label">Others online</div><div id="online"></div></div>
   </section>
+
+  <section class="card hidden" id="profcard">
+    <div class="shead"><h2>Your ratings</h2></div>
+    <div class="ratings" id="myratings"></div>
+    <div id="recentwrap" class="hidden"><div class="label">Recent games</div><div class="recent" id="recent"></div></div>
+  </section>
+
+  <section class="card hidden" id="lbcard">
+    <div class="shead"><h2>Leaderboard</h2></div>
+    <div class="tabs" id="lbtabs">
+      <button data-cat="bullet">Bullet</button><button data-cat="blitz" class="on">Blitz</button>
+      <button data-cat="rapid">Rapid</button><button data-cat="classical">Classical</button>
+    </div>
+    <div class="lb" id="lb"></div>
+  </section>
 </main>
 
 <div class="modal hidden" id="chal"></div>
@@ -323,8 +384,10 @@ footer a{color:#6b665e}
       <button data-nav="prev" title="Back (←)">◀</button>
       <button data-nav="next" title="Forward (→)">▶</button>
       <button data-nav="last" title="Current position">⏭</button>
+      <button id="bpgn" title="Copy PGN">PGN</button>
     </div>
     <div class="offer hidden" id="offer"><b>Opponent offers a draw</b><button class="btn g" id="acc">Accept</button><button class="btn" id="dec">Decline</button></div>
+    <div class="abandon hidden" id="abandon"><b id="abtxt"></b><button class="btn g" id="abclaim">Claim win</button></div>
     <div class="offer hidden" id="tbreq"><b>Opponent asks to take back a move</b><button class="btn g" id="tbacc">Accept</button><button class="btn" id="tbdec">Decline</button></div>
     <div class="acts" id="acts">
       <button id="bundo"><span>↶</span>Undo</button>
@@ -341,7 +404,7 @@ footer a{color:#6b665e}
   </aside>
 </main>
 
-<footer>Pieces: “cburnett” (CC BY-SA 3.0) · sounds: <a href="https://freesound.org/people/el_boss/packs/30764/" target="_blank" rel="noopener">el_boss</a> (CC0) · rules: chess.js &amp; python-chess · <a href="/privacy">Privacy & terms</a></footer>
+<footer>Piece sets from <a href="https://github.com/lichess-org/lila/blob/master/COPYING.md" target="_blank" rel="noopener">lichess</a> (Staunty, California, Maestro, Cardinal by sadsnake1 &amp; Jerry S., CC BY-NC-SA 4.0; Cburnett &amp; Merida GPLv2+; Chessnut Apache 2.0) · sounds from Freesound (JJTaynos, Amatsuuu, el_boss, CC0) · rules: chess.js &amp; python-chess · <a href="/privacy">Privacy & terms</a></footer>
 <div class="toast" id="toast"></div>
 
 <script type="module">
@@ -350,11 +413,13 @@ import { Chess } from 'https://cdn.jsdelivr.net/npm/chess.js@1.0.0/+esm';
 const $ = s => document.querySelector(s);
 const NAMES = {p:'pawn',n:'knight',b:'bishop',r:'rook',q:'queen',k:'king'};
 const VAL = {p:1,n:3,b:3,r:5,q:9};
+const CAT_NAME = {bullet:'Bullet', blitz:'Blitz', rapid:'Rapid', classical:'Classical'};
+const CAT_ICON = {bullet:'●', blitz:'⚡', rapid:'⏱', classical:'♔'};
 const REASONS = {
   'mats':'Checkmate','pats':'Stalemate','laiks':'Time ran out','padošanās':'Resignation',
   'vienošanās':'Agreement','atkārtošanās':'Threefold repetition',
   'materiāls':'Insufficient material','50 gājieni':'50-move rule','pārtraukta':'Game aborted',
-  'laiks-materiāls':'Timeout vs insufficient material'
+  'laiks-materiāls':'Timeout vs insufficient material', 'pamesta':'Opponent left the game'
 };
 const store = {
   get(k){ try{ return localStorage.getItem(k) }catch{ return null } },
@@ -379,16 +444,42 @@ const serverApi = api;
 /* ---------- skaņas (bez failiem, ģenerētas) ---------- */
 let actx, master;
 let muted = store.get('gambits:mute') === '1';
-/* īsti koka figūru ieraksti (el_boss, Freesound, CC0), ielādēti vienreiz un atskaņoti bez aiztures */
-const SND_NAMES = ['place', 'capture', 'slide', 'start'];
+/* --- spēlētāja iestatījumi (glabājas šajā ierīcē) --- */
+const SET = Object.assign({pieces:'staunty', sounds:'wood', volume:.8, legal:true, coords:true,
+  autoQueen:false, premove:true, anim:'normal', confirmResign:true},
+  (() => { try{ return JSON.parse(store.get('gambits:settings') || '{}') || {}; }catch{ return {}; } })());
+const saveSet = () => store.set('gambits:settings', JSON.stringify(SET));
+const PIECE_SETS = [['staunty','Staunty'],['california','California'],['maestro','Maestro'],['cardinal','Cardinal'],['cburnett','Classic'],['merida','Merida'],['chessnut','Chessnut']];
+const SOUND_SETS = [['wood','Wood'],['crisp','Crisp'],['classic','Classic']];
+function applySettings(){
+  // figūru komplekts: tie paši elementi, cits attēls
+  const N = {king:'K',queen:'Q',rook:'R',bishop:'B',knight:'N',pawn:'P'};
+  let css = '';
+  for(const [n, l] of Object.entries(N)) for(const [c, p] of [['white','w'],['black','b']])
+    css += `.cg-wrap piece.${n}.${c}{background-image:url(/p/${SET.pieces}/${p}${l}.svg)}`;
+  let st = document.getElementById('pieceStyle');
+  if(!st){ st = document.createElement('style'); st.id = 'pieceStyle'; document.head.appendChild(st); }
+  st.textContent = css;
+  document.body.classList.toggle('nolegal', !SET.legal);
+  document.body.classList.toggle('nocoords', !SET.coords);
+  document.documentElement.style.setProperty('--anim', {fast:'.1s', normal:'.2s', slow:'.32s', off:'0s'}[SET.anim] || '.2s');
+  if(master) master.gain.value = SET.volume;
+}
+applySettings();
+
+/* īsti koka figūru ieraksti (Freesound, CC0): divi apstrādāti komplekti + klasiskais */
+const SND_NAMES = ['snd_place.ogg', 'snd_capture.ogg', 'snd_slide.ogg', 'snd_start.ogg',
+  ...['wood','crisp'].flatMap(s => ['move','moveopp','capture','castle','check'].map(k => `${s}_${k}.wav`))];
 const buffers = {};
 let loading = null;
 function loadSounds(){
   if(loading || !actx) return loading;
-  const ext = new Audio().canPlayType('audio/ogg; codecs="vorbis"') ? 'ogg' : 'mp3';
-  loading = Promise.all(SND_NAMES.map(async n => {
+  const ogg = !!new Audio().canPlayType('audio/ogg; codecs="vorbis"');
+  loading = Promise.all(SND_NAMES.map(async file => {
+    const n = file.replace(/\.(ogg|wav)$/, '').replace(/^snd_/, '');
+    const url = '/s/' + (file.endsWith('.ogg') && !ogg ? file.replace('.ogg', '.mp3') : file);
     try{
-      const data = await (await fetch(`/s/snd_${n}.${ext}`)).arrayBuffer();
+      const data = await (await fetch(url)).arrayBuffer();
       buffers[n] = await new Promise((ok, bad) => actx.decodeAudioData(data, ok, bad));
     }catch{}
   }));
@@ -398,7 +489,7 @@ function unlockAudio(){
   try{
     if(!actx){
       actx = new AudioContext();
-      master = actx.createGain(); master.gain.value = 1;
+      master = actx.createGain(); master.gain.value = SET.volume;
       master.connect(actx.destination);
       loadSounds();
     }
@@ -416,13 +507,14 @@ function play(name, {delay = 0, rate = 1, vol = 1} = {}){
   src.connect(g).connect(master);
   src.start(actx.currentTime + delay);
 }
+const S_ = () => SET.sounds === 'classic' ? null : SET.sounds;   // izvēlētais ierakstu komplekts
 const sound = {
-  // pretinieka gājiens skan nedaudz zemāk, lai pēc dzirdes var atšķirt
-  move(mine = true){ play('place', {rate: mine ? 1 : .93}) },
-  capture(){ play('capture') },
-  castle(){ play('place', {rate: 1.02}); play('place', {delay: .12, rate: .96, vol: .85}) },
-  promote(){ play('place'); play('slide', {delay: .09, rate: 1.25, vol: .7}) },
-  check(){ play('capture', {rate: 1.28, vol: 1.1}) },
+  // pretinieka gājiens skan nedaudz citādi, lai pēc dzirdes var atšķirt
+  move(mine = true){ const s = S_(); s ? play(`${s}_${mine ? 'move' : 'moveopp'}`) : play('place', {rate: mine ? 1 : .93}) },
+  capture(){ const s = S_(); s ? play(`${s}_capture`) : play('capture') },
+  castle(){ const s = S_(); s ? play(`${s}_castle`) : (play('place', {rate: 1.02}), play('place', {delay: .12, rate: .96, vol: .85})) },
+  promote(){ const s = S_(); s ? play(`${s}_move`) : play('place'); play('slide', {delay: .09, rate: 1.25, vol: .7}) },
+  check(){ const s = S_(); s ? play(`${s}_check`) : play('capture', {rate: 1.28, vol: 1.1}) },
   premove(){ play('slide', {rate: 1.4, vol: .35}) },
   illegal(){ play('slide', {rate: .7, vol: .5}) },
   start(){ play('start') },
@@ -472,6 +564,39 @@ document.getElementById('btheme').onclick = () => {
   theme = (theme + 1) % THEMES.length; store.set('gambits:theme2', theme); applyTheme();
   toast('Board: ' + THEMES[theme][0]);
 };
+/* --- iestatījumu logs --- */
+function openSettings(){
+  const m = document.getElementById('setm');
+  const tog = (k, label, hint) => `<div class="srow"><b>${label}${hint ? `<small>${hint}</small>` : ''}</b><button class="toggle ${SET[k] ? 'on' : ''}" data-tog="${k}" aria-label="${label}"></button></div>`;
+  m.innerHTML = `<div class="ocard settings">
+    <h3>Settings</h3>
+    <div class="label">Board</div>
+    <div class="swatches">${THEMES.map(([n,l,d],i) => `<button class="swatch ${i===theme?'on':''}" data-theme="${i}" title="${n}" style="--l:${l};--d:${d}"><i></i><i></i><i></i><i></i></button>`).join('')}</div>
+    <div class="label">Pieces</div>
+    <div class="psets">${PIECE_SETS.map(([k,n]) => `<button class="pset ${k===SET.pieces?'on':''}" data-pset="${k}" title="${n}" style="background-image:url(/p/${k}/wN.svg)"></button>`).join('')}</div>
+    <div class="label">Sounds</div>
+    <div class="ssets">${SOUND_SETS.map(([k,n]) => `<button class="sset ${k===SET.sounds?'on':''}" data-sset="${k}">${n}</button>`).join('')}</div>
+    <div class="srow"><b>Volume</b><input type="range" min="0" max="1" step="0.05" value="${SET.volume}" id="svol"></div>
+    ${tog('legal', 'Show legal moves', 'Dots on the squares a piece can go to')}
+    ${tog('coords', 'Board coordinates')}
+    ${tog('premove', 'Premoves', 'Plan a move while your opponent thinks')}
+    ${tog('autoQueen', 'Always promote to queen')}
+    ${tog('confirmResign', 'Confirm before resigning')}
+    <div class="srow"><b>Piece animation</b><select class="sel" id="sanim">${['off','fast','normal','slow'].map(a => `<option ${a===SET.anim?'selected':''}>${a}</option>`).join('')}</select></div>
+    <button class="big" id="sdone" style="margin-top:14px">Done</button></div>`;
+  m.classList.remove('hidden');
+  const redraw = () => { applySettings(); openSettings(); };
+  m.querySelectorAll('[data-tog]').forEach(b => b.onclick = () => { SET[b.dataset.tog] = !SET[b.dataset.tog]; saveSet(); redraw(); });
+  m.querySelectorAll('[data-theme]').forEach(b => b.onclick = () => { theme = +b.dataset.theme; store.set('gambits:theme2', theme); applyTheme(); redraw(); });
+  m.querySelectorAll('[data-pset]').forEach(b => b.onclick = () => { SET.pieces = b.dataset.pset; saveSet(); redraw(); });
+  m.querySelectorAll('[data-sset]').forEach(b => b.onclick = () => { unlockAudio(); SET.sounds = b.dataset.sset; saveSet(); redraw(); setTimeout(() => { sound.move(); setTimeout(() => sound.capture(), 350); }, 150); });
+  m.querySelector('#svol').oninput = e => { SET.volume = +e.target.value; saveSet(); applySettings(); };
+  m.querySelector('#svol').onchange = () => { unlockAudio(); sound.move(); };
+  m.querySelector('#sanim').onchange = e => { SET.anim = e.target.value; saveSet(); applySettings(); };
+  m.querySelector('#sdone').onclick = () => m.classList.add('hidden');
+  m.onclick = e => { if(e.target === m) m.classList.add('hidden'); };
+}
+document.getElementById('bset').onclick = () => { unlockAudio(); openSettings(); };
 const muteBtn = document.getElementById('bmute');
 muteBtn.textContent = muted ? '🔇' : '🔊';
 muteBtn.onclick = () => {
@@ -672,7 +797,7 @@ function renderSocial(){
     const st = !o ? 'Offline' : o.status === 'playing' ? 'Playing' : 'Online';
     const free = o && o.status === 'free';
     return `<div class="prow ${o ? '' : 'off'}"><div class="ava w">${esc((name||'?')[0].toUpperCase())}</div>
-      <div class="nm">${esc(name)}<small><i class="dot ${o?'on':''}"></i>${st}</small></div>
+      <div class="nm">${esc(name)}${LB.data[pid] ? `<span class="rating">${LB.data[pid].ratings[LB.cat]}</span>` : ''}<small><i class="dot ${o?'on':''}"></i>${st}</small></div>
       ${isFriend ? '' : `<button class="btn small" data-add="${pid}" title="Add friend">+</button>`}
       ${free ? `<button class="btn g small" data-ch="${pid}">Challenge</button>` : ''}
       ${isFriend ? `<button class="x" data-rm="${pid}" title="Remove friend" aria-label="Remove friend">✕</button>` : ''}</div>`;
@@ -709,8 +834,54 @@ document.addEventListener('click', e => {
   lobbyLoop();
 })();
 
+/* ---------- profils un līderu tabula ---------- */
+const LB = {cat: 'blitz', data: {}};
+async function loadProfile(){
+  if(!isGoogle()) return;
+  try{
+    const p = await (await fetch(`/api/profile?pid=${ME.pid}&token=${ME.secret}`)).json();
+    if(p.error) return;
+    $('#profcard').classList.remove('hidden');
+    $('#myratings').innerHTML = Object.entries(CAT_NAME).map(([c, n]) => {
+      const r = p.ratings[c];
+      return `<div class="rtile" title="${r.w}W ${r.d}D ${r.l}L · best ${r.best}"><div class="ic">${CAT_ICON[c]}</div><b>${r.games ? r.rating : '—'}</b><small>${n}</small></div>`;
+    }).join('');
+    $('#recentwrap').classList.toggle('hidden', !p.recent.length);
+    $('#recent').innerHTML = p.recent.slice(0, 8).map(g => {
+      const d = g.delta || 0;
+      return `<div class="rg"><span class="res ${g.res}">${g.res === 'win' ? 'W' : g.res === 'loss' ? 'L' : '½'}</span>
+        <span>vs <b></b> <small style="color:var(--muted)">${CAT_NAME[g.cat] || ''} · ${REASONS[g.reason] || ''}</small></span>
+        <span style="color:var(--muted)">${g.rating}</span><span class="delta ${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : ''}${d}</span></div>`;
+    }).join('');
+    // pretinieka vārdu ieliek kā tekstu, nevis HTML
+    [...$('#recent').querySelectorAll('.rg b')].forEach((b, i) => b.textContent = p.recent[i].oppName);
+  }catch{}
+}
+async function loadLeaderboard(){
+  if(!isGoogle()) return;
+  try{
+    LB.data = await api('/api/ratings', {token: ME.secret, pids: [ME.pid, ...Object.keys(friends)]});
+    if(LB.data.error) return;
+    $('#lbcard').classList.toggle('hidden', Object.keys(LB.data).length < 2);
+    drawLeaderboard(); renderSocial();
+  }catch{}
+}
+function drawLeaderboard(){
+  document.querySelectorAll('#lbtabs button').forEach(b => b.classList.toggle('on', b.dataset.cat === LB.cat));
+  const rows = Object.entries(LB.data).sort((a, b) => b[1].ratings[LB.cat] - a[1].ratings[LB.cat]);
+  const lb = $('#lb'); lb.innerHTML = '';
+  rows.forEach(([pid, u], i) => {
+    const r = document.createElement('div'); r.className = 'lbr' + (pid === ME.pid ? ' me' : '');
+    r.innerHTML = `<span class="pos">${i + 1}</span>${u.picture ? `<img src="${esc(u.picture)}" alt="" referrerpolicy="no-referrer">` : `<div class="ava w">${esc((u.name || '?')[0])}</div>`}<b></b><span>${u.games[LB.cat] ? u.ratings[LB.cat] : '<span style="color:var(--muted)">—</span>'}</span>`;
+    r.querySelector('b').textContent = u.name + (pid === ME.pid ? ' (you)' : '');
+    lb.appendChild(r);
+  });
+}
+
 /* ---------- SĀKUMLAPA ---------- */
 function initHome(){
+  loadProfile(); loadLeaderboard();
+  $('#lbtabs').onclick = e => { const b = e.target.closest('button'); if(!b) return; LB.cat = b.dataset.cat; drawLeaderboard(); };
   HOME.active = true;
   $('#home').classList.remove('hidden');
   $('#name').value = ME.name;
@@ -976,8 +1147,10 @@ function initGame(id){
       }
       const adv = c==='w' ? mat.diff : -mat.diff;
       if(adv>0) caps += `<span class="adv">+${adv}</span>`;
-      el.innerHTML = `<div class="ava ${c}">${(pl.name||'?')[0].toUpperCase()}</div>
-        <div class="pinfo"><div class="pname"><i class="dot ${pl.online?'on':''}" title="${pl.online?'Online':'Offline'}"></i>${esc(name)}</div>
+      const ava = pl.picture ? `<img src="${esc(pl.picture)}" alt="" referrerpolicy="no-referrer">` : esc((pl.name||'?')[0].toUpperCase());
+      const rt = pl.rating ? `<span class="rating">(${pl.rating})</span>` : '';
+      el.innerHTML = `<div class="ava ${c}">${ava}</div>
+        <div class="pinfo"><div class="pname"><i class="dot ${pl.online?'on':''}" title="${pl.online?'Online':'Offline'}"></i>${esc(name)}${rt}</div>
         <div class="caps">${caps}</div></div>
         <div class="clock" data-c="${c}"></div>`;
     };
@@ -1051,6 +1224,15 @@ function initGame(id){
     $('#bundo').disabled = !playing || !hasMoves || (!localMode && st.takeback === S.me);
     $('#bundo').innerHTML = !localMode && st.takeback === S.me ? '<span>↶</span>Asked' : '<span>↶</span>Undo';
     $('#tbreq').classList.toggle('hidden', !(playing && !localMode && st.takeback && st.takeback !== S.me));
+    // pretinieks pazudis: pēc 45 s var pieprasīt uzvaru
+    const opp = S.me ? st.players[S.me==='w'?'b':'w'] : null;
+    const gone = playing && !localMode && opp && opp.taken && !opp.online && S.chess.history().length >= 2;
+    $('#abandon').classList.toggle('hidden', !gone);
+    if(gone){
+      const left = Math.max(0, Math.ceil(46 - opp.away - (performance.now() - S.recvAt)/1000));
+      $('#abtxt').textContent = left > 0 ? `Your opponent left. You can claim the win in ${left}s` : 'Your opponent left the game';
+      $('#abclaim').disabled = left > 0;
+    }
     const tc = st.minutes === 0 ? 'No clock' : `${st.minutes} min` + (st.inc ? ` | ${st.inc} s` : '');
     $('#tcb').textContent = tc;
     $('#hdrinfo').textContent = localMode ? 'Same device' : S.me ? `You play ${S.me==='w'?'White':'Black'}` : 'Spectator';
@@ -1094,6 +1276,8 @@ function initGame(id){
       ov.innerHTML = `<div class="ocard">
         <div class="res-big">${st.result==='1/2-1/2'?'½–½':st.result==='*'?'—':st.result.replace('-','–')}</div>
         <h3>${resultText(st)}</h3><p>${REASONS[st.reason]||st.reason||''}</p>
+        ${S.me && st.ratingChange ? (() => { const d = st.ratingChange[S.me], r = (st.players[S.me].rating ?? 0);
+          return `<div class="rchange ${d >= 0 ? 'up' : 'down'}">${CAT_NAME[st.cat] || ''} ${r} <span>${d >= 0 ? '+' : ''}${d}</span></div>`; })() : ''}
         ${S.me ? `<div class="res-btns">
           <button class="btn g" id="rm" ${wantMe?'disabled':''}>${wantMe?'Waiting for opponent…':wantThem?'Accept rematch':'Rematch'}</button>
           <button class="btn" id="nw">New game</button></div>
@@ -1189,7 +1373,7 @@ function initGame(id){
   }
   function canPremove(){
     const st = S.st;
-    return !!(st && S.me && !st.result && live() && S.chess.turn() !== S.me && st.players.w.taken && st.players.b.taken);
+    return !!(SET.premove && !localMode && st && S.me && !st.result && live() && S.chess.turn() !== S.me && st.players.w.taken && st.players.b.taken);
   }
   function runPremove(){
     const pm = S.premove; S.premove = null;
@@ -1229,7 +1413,7 @@ function initGame(id){
     }
     const opts = S.chess.moves({square:from, verbose:true}).filter(m => m.to === to);
     if(!opts.length) return false;
-    if(opts.some(m => m.promotion)){ askPromo(from, to); return true; }
+    if(opts.some(m => m.promotion)){ SET.autoQueen ? doMove(from, to, 'q', animate) : askPromo(from, to); return true; }
     doMove(from, to, undefined, animate);
     return true;
   }
@@ -1372,12 +1556,24 @@ function initGame(id){
   };
   $('#bresign').onclick = () => {
     const early = S.chess.history().length < 2;
-    if(!confirm(early ? 'Abort the game?' : 'Resign this game?')) return;
+    if(SET.confirmResign && !confirm(early ? 'Abort the game?' : 'Resign this game?')) return;
     api('/api/action', {id:S.id, token:S.token, type: early ? 'abort' : 'resign'});
   };
   $('#bdraw').onclick = () => {
     if(localMode){ if(confirm('Agree to a draw?')) api('/api/action', {id:S.id, token:S.token, type:'draw_offer'}); return; }
     api('/api/action', {id:S.id, token:S.token, type:'draw_offer'}); toast('Draw offered');
+  };
+  $('#abclaim').onclick = () => api('/api/action', {id:S.id, token:S.token, type:'claim'});
+  setInterval(() => { if(!$('#abandon').classList.contains('hidden')) drawStatus(); }, 1000);
+  $('#bpgn').onclick = () => {
+    // PGN ar galveni, ko var ielīmēt jebkurā šaha programmā analīzei
+    const st = S.st || {}, p = st.players || {};
+    const head = [['Event', localMode ? 'Gambit (same device)' : 'Gambit online'], ['Site', location.origin],
+      ['Date', new Date().toISOString().slice(0,10).replace(/-/g,'.')], ['White', p.w?.name || 'White'], ['Black', p.b?.name || 'Black'],
+      ['Result', st.result && st.result !== '*' ? st.result : '*'], ['TimeControl', st.minutes ? `${st.minutes*60}+${st.inc}` : '-']];
+    const c = new Chess(); for(const m of S.chess.history()) c.move(m);
+    const pgn = head.map(([k,v]) => `[${k} "${v}"]`).join('\n') + '\n\n' + c.pgn() + (st.result && st.result !== '*' ? ' ' + st.result : '');
+    (navigator.clipboard ? navigator.clipboard.writeText(pgn) : Promise.reject()).then(() => toast('PGN copied')).catch(() => toast('Could not copy PGN'));
   };
   $('#bundo').onclick = () => {
     api('/api/action', {id:S.id, token:S.token, type:'takeback'});
