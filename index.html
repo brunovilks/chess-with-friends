@@ -1,0 +1,1369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Gambit — Chess with Friends</title>
+<meta name="theme-color" content="#211f1c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♞</text></svg>">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chessground@9.1.1/assets/chessground.cburnett.css">
+<style>
+:root{
+  --bg:#211f1c; --panel:#2b2925; --panel2:#33302b; --line:#3d3a35;
+  --text:#ece8e1; --muted:#9d978d; --accent:#7fb24a; --accent2:#93c95a;
+  --light:#efdcbc; --dark:#ad8462;
+  --last:rgba(240,215,60,.48); --sel:rgba(240,215,60,.62);
+  --red:#e0574b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+input{font:inherit;color:inherit}
+a{color:var(--accent2)}
+.hidden{display:none!important}
+
+/* galvene */
+header{height:52px;display:flex;align-items:center;gap:10px;padding:0 18px;border-bottom:1px solid var(--line);background:#1b1a17}
+.logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:20px;letter-spacing:.3px;text-decoration:none;color:var(--text)}
+.logo span{display:grid;place-items:center;width:32px;height:32px;border-radius:8px;background:var(--accent);color:#1b1a17;font-size:22px}
+header .sp{flex:1}
+.pill{padding:6px 12px;border-radius:999px;background:var(--panel2);color:var(--muted);font-size:13px}
+
+/* sākumlapa */
+#home{max-width:980px;margin:0 auto;padding:34px 18px 60px;display:grid;grid-template-columns:1fr 400px;gap:34px;align-items:center}
+.hero h1{font-size:42px;line-height:1.1;margin:0 0 14px}
+.hero p{color:var(--muted);font-size:17px;margin:0 0 22px}
+.steps{display:grid;gap:12px}
+.step{display:flex;gap:12px;align-items:center;color:var(--muted)}
+.step b{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:50%;background:var(--panel2);color:var(--text)}
+.card{background:var(--panel);border-radius:14px;padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.card h2{margin:0 0 16px;font-size:20px}
+.label{font-size:13px;color:var(--muted);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+.tc{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tc button,.colors button{background:var(--panel2);border-radius:9px;padding:10px 4px;font-weight:700;border:2px solid transparent;transition:.12s}
+.tc button small{display:block;font-weight:500;color:var(--muted);font-size:11px}
+.tc button:hover,.colors button:hover{background:#3b3832}
+.tc button.on,.colors button.on{border-color:var(--accent);background:#353a2c}
+.colors{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.colors button{font-size:26px;line-height:1.1;padding:8px}
+.colors piece{position:static;display:block;width:38px;height:38px;margin:0 auto 2px}
+.colors .rnd{display:flex;justify-content:center}
+.colors .rnd piece{width:30px;height:30px;margin:4px -5px 6px}
+.colors button small{display:block;font-size:12px;color:var(--muted);font-weight:500}
+.field{width:100%;background:var(--panel2);border:2px solid transparent;border-radius:9px;padding:11px 12px;outline:none}
+.field:focus{border-color:var(--accent)}
+.big{width:100%;margin-top:20px;background:var(--accent);color:#16200c;font-weight:800;font-size:18px;padding:14px;border-radius:11px;box-shadow:0 4px 0 #5d8a32;transition:.1s}
+.big:hover{background:var(--accent2)}
+.big:active{transform:translateY(3px);box-shadow:0 1px 0 #5d8a32}
+.big:disabled{opacity:.6}
+
+:root{--arrow:rgba(255,170,0,.82);--pre:rgba(214,79,60,.55)}
+.hbtn{width:36px;height:36px;border-radius:9px;background:var(--panel2);font-size:17px;display:grid;place-items:center;transition:.15s}
+.hbtn:hover{background:#45413a;transform:translateY(-1px)}
+.sq{transition:background-color .25s}
+.sq.pre::before{content:"";position:absolute;inset:0;background:var(--pre)}
+piece.ghosted{opacity:.55}
+#marks,#fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:6}
+#fx{z-index:40}
+.anim{transition:transform .2s cubic-bezier(.25,.8,.35,1)!important}
+piece.ghost{filter:drop-shadow(0 8px 10px rgba(0,0,0,.45));transform:scale(1.12)!important}
+.mine piece.me:hover{filter:brightness(1.06)}
+/* sākumlapa: viena kolonna, trīs bloki */
+#home:not(.hidden){display:grid!important;grid-template-columns:1fr!important;max-width:560px!important;gap:16px!important;padding-top:24px!important;align-items:start}
+.hello{display:flex;align-items:center;gap:14px;padding:4px 2px}
+.ava.big{width:52px;height:52px;font-size:22px;border-radius:12px}
+.ava img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.hello-txt{flex:1;min-width:0}
+.muted{color:var(--muted);font-size:13px}
+#name{background:none;border:0;border-bottom:2px solid transparent;font-size:24px;font-weight:800;width:100%;padding:0 0 2px;outline:none;color:var(--text)}
+#name:hover{border-bottom-color:var(--line)}#name:focus{border-bottom-color:var(--accent)}
+#gbox{flex:none;display:flex;align-items:center;gap:8px}
+.gsigned{font-size:12px;color:var(--muted);text-align:right;line-height:1.3}
+.gsigned button{color:var(--muted);text-decoration:underline;font-size:12px}
+.play{display:grid;gap:12px}
+.play .tc{grid-template-columns:repeat(4,1fr)}
+.play .tc button{font-size:18px;padding:10px 2px}
+.play .colors piece{width:30px;height:30px}
+.play .colors button{padding:6px}
+.play .big{margin-top:2px}
+.shead{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.shead h2{margin:0;flex:1}
+.btn.small{padding:7px 12px;font-size:13px}
+.sr{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.social .label{margin-top:16px}
+#home .card{padding:18px}
+.prow.off{opacity:.55}
+.btn.alt{width:100%;padding:12px;font-size:15px;border:2px solid var(--line);background:transparent}
+.btn.alt:hover{background:var(--panel2)}
+.acts button.wide{grid-column:1/-1;flex-direction:row;justify-content:center;gap:8px}
+.acts button.on{background:#353a2c;color:var(--accent2)}
+body.local #chat,body.local #offer{display:none!important}
+.prow .dot{display:inline-block;margin-right:5px;vertical-align:middle}
+body:has(#home:not(.hidden)) #hdrinfo{display:none}
+.leftcol{display:grid;gap:22px;min-width:0}
+.hint{color:var(--muted);font-size:13px;margin:8px 0 0}
+.social .linkrow input{background:var(--panel2)}
+.plist{display:grid;gap:6px}
+.prow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;background:var(--panel2)}
+.prow .ava{width:32px;height:32px;font-size:15px}
+.prow .nm{flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .nm small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.prow .btn{padding:7px 12px;font-size:13px}
+.prow .x{color:var(--muted);padding:6px 8px;border-radius:7px}.prow .x:hover{background:#45413a}
+.none{color:var(--muted);font-size:14px;padding:4px 2px}
+.modal{position:fixed;inset:0;z-index:90;background:rgba(18,17,15,.7);display:grid;place-items:center;padding:16px}
+.modal .ocard{animation:pop .2s ease-out}
+@keyframes pop{from{transform:scale(.94);opacity:0}}
+/* spēle */
+#game{display:flex;gap:22px;justify-content:center;padding:18px;align-items:flex-start}
+.boardcol{width:var(--bs);flex:none}
+:root{--bs:min(calc(100vh - 52px - 150px), 680px)}
+.pbar{display:flex;align-items:center;gap:10px;height:52px}
+.ava{width:38px;height:38px;border-radius:8px;display:grid;place-items:center;font-weight:800;font-size:18px;flex:none}
+.ava.w{background:#e9e4da;color:#2b2925}.ava.b{background:#4a4640;color:#ece8e1}
+.pinfo{flex:1;min-width:0}
+.pname{font-weight:700;display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{width:8px;height:8px;border-radius:50%;background:#6b665e;flex:none}
+.dot.on{background:var(--accent2);box-shadow:0 0 0 3px rgba(127,178,74,.2)}
+.caps{height:18px;display:flex;align-items:center;font-size:12px;color:var(--muted)}
+.caps piece{display:inline-block;width:17px;height:17px;background-size:cover;margin-right:-6px;position:static}
+.caps .gap{width:10px}
+.caps .adv{margin-left:10px}
+.clock{min-width:100px;text-align:right;font:700 24px/1 ui-monospace,"Cascadia Mono",Consolas,monospace;padding:9px 12px;border-radius:7px;background:#3a3732;color:#8f8a81;font-variant-numeric:tabular-nums}
+.clock.act{background:#ece8e1;color:#211f1c}
+.clock.low.act{background:var(--red);color:#fff}
+.clock.none{visibility:hidden}
+
+.boardwrap{position:relative;width:var(--bs);height:var(--bs);border-radius:4px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.35);touch-action:none;user-select:none}
+#board{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);width:100%;height:100%}
+.sq{position:relative}
+.sq.l{background:var(--light)}.sq.d{background:var(--dark)}
+.sq.last::before,.sq.sel::before{content:"";position:absolute;inset:0}
+.sq.last::before{background:var(--last)}
+.sq.sel::before{background:var(--sel)}
+.sq.chk{background:radial-gradient(circle,#ff2a1a 0%,#e6201099 35%,transparent 72%),var(--sqc)}
+.sq.l.chk{--sqc:var(--light)}.sq.d.chk{--sqc:var(--dark)}
+.sq.tgt::after{content:"";position:absolute;left:50%;top:50%;width:30%;height:30%;transform:translate(-50%,-50%);border-radius:50%;background:rgba(20,20,20,.2);z-index:3;pointer-events:none}
+.sq.tgt.cap::after{width:88%;height:88%;background:transparent;border:calc(var(--bs)/110) solid rgba(20,20,20,.2)}
+.sq.hov{box-shadow:inset 0 0 0 calc(var(--bs)/170) rgba(255,255,255,.75)}
+.sq .cf,.sq .cr{position:absolute;font-size:calc(var(--bs)/52);font-weight:700;pointer-events:none;z-index:1}
+.sq .cr{left:4%;top:3%}.sq .cf{right:5%;bottom:2%}
+.sq.l .cf,.sq.l .cr{color:var(--dark)}.sq.d .cf,.sq.d .cr{color:var(--light)}
+piece{position:absolute;inset:0;background-size:cover;z-index:2;will-change:transform}
+.mine piece.me{cursor:grab}
+piece.ghost{position:fixed;inset:auto;z-index:50;pointer-events:none;cursor:grabbing;transform:scale(1.08)}
+piece.dragging{opacity:.3}
+.anim{transition:transform .17s ease-out}
+
+.promo{position:absolute;z-index:20;display:flex;flex-direction:column;background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.5);border-radius:4px;overflow:hidden}
+.promo button{position:relative;width:calc(var(--bs)/8);height:calc(var(--bs)/8)}
+.promo button:hover{background:#f2c46b}
+.promo piece{inset:4%}
+
+.overlay{position:absolute;inset:0;z-index:30;background:rgba(18,17,15,.72);display:grid;place-items:center;padding:16px;backdrop-filter:blur(2px)}
+.ocard{background:var(--panel);border-radius:14px;padding:24px;width:min(420px,100%);text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.ocard h3{margin:0 0 6px;font-size:22px}
+.ocard p{margin:0 0 16px;color:var(--muted)}
+.linkrow{display:flex;gap:8px}
+.linkrow input{flex:1;min-width:0;background:var(--panel2);border:0;border-radius:9px;padding:11px;color:var(--text);font-size:14px}
+.btn{background:var(--panel2);padding:10px 14px;border-radius:9px;font-weight:700;transition:.12s}
+.btn:hover{background:#45413a}
+.btn.g{background:var(--accent);color:#16200c}.btn.g:hover{background:var(--accent2)}
+.spinner{width:34px;height:34px;border:4px solid var(--panel2);border-top-color:var(--accent);border-radius:50%;margin:0 auto 14px;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.res-big{font-size:44px;font-weight:800;margin:4px 0}
+.res-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+
+/* sānu panelis */
+.side{width:340px;flex:none;background:var(--panel);border-radius:12px;display:flex;flex-direction:column;height:calc(var(--bs) + 104px);overflow:hidden}
+.side .hd{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;font-weight:700}
+.side .hd .tcb{margin-left:auto;font-weight:600;color:var(--muted);font-size:13px}
+#moves{flex:1 1 50%;overflow:auto;min-height:90px;font-size:14px}
+.mrow{display:grid;grid-template-columns:44px 1fr 1fr;padding:0 6px}
+.mrow:nth-child(odd){background:#2f2c28}
+.mrow .n{color:var(--muted);padding:6px 0 6px 6px}
+.mv{padding:6px 8px;border-radius:5px;cursor:pointer;font-weight:600;text-align:left}
+.mv:hover{background:#3d3a34}
+.mv.cur{background:#4a5a35}
+.nav{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:8px;border-top:1px solid var(--line)}
+.nav button{background:var(--panel2);border-radius:7px;padding:8px 0;font-size:16px}
+.nav button:hover{background:#45413a}
+.acts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:0 8px 8px}
+.acts button{background:var(--panel2);border-radius:8px;padding:9px 4px;font-size:13px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:2px}
+.acts button span{font-size:18px;line-height:1}
+.acts button:hover{background:#45413a}
+.acts button:disabled{opacity:.35;cursor:default}
+.offer{margin:0 8px 8px;padding:10px;border-radius:9px;background:#3a4130;display:flex;align-items:center;gap:8px;font-size:14px}
+.offer b{flex:1}
+.offer .btn{padding:6px 10px;font-size:13px}
+.status{padding:9px 14px;font-size:14px;color:var(--muted);border-top:1px solid var(--line);text-align:center}
+.status.you{color:var(--accent2);font-weight:700}
+#chat{flex:1 1 50%;display:flex;flex-direction:column;border-top:1px solid var(--line);min-height:120px}
+#chatlog{flex:1;overflow:auto;padding:8px 12px;font-size:14px}
+#chatlog div{margin:3px 0;word-wrap:break-word}
+#chatlog .sys{color:var(--muted);font-style:italic}
+#chatlog b.w{color:#f1ede5}#chatlog b.b{color:#b8b1a5}#chatlog b.s{color:#8a9bb0}
+#chatform{display:flex;padding:8px;gap:6px;border-top:1px solid var(--line)}
+#chatform input{flex:1;min-width:0;background:var(--panel2);border:0;border-radius:8px;padding:9px 10px;outline:none}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);background:#ece8e1;color:#211f1c;padding:10px 18px;border-radius:9px;font-weight:700;opacity:0;transition:.2s;z-index:100;pointer-events:none}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+footer{text-align:center;color:#6b665e;font-size:12px;padding:10px}
+footer a{color:#6b665e}
+
+@media (max-width:900px){
+  :root{--bs:min(calc(100vw - 16px), calc(100vh - 52px - 130px))}
+  #home{grid-template-columns:1fr;padding-top:22px}
+  .hero h1{font-size:32px}
+  #game{flex-direction:column;align-items:center;padding:8px;gap:12px}
+  .side{width:var(--bs);height:auto}
+  #moves{max-height:150px}
+  #chatlog{max-height:160px}
+  .pbar{height:46px}
+  .clock{font-size:20px;min-width:84px;padding:8px 10px}
+}
+</style>
+</head>
+<body class="cg-wrap">
+<header>
+  <a class="logo" href="/"><span>♞</span>Gambit</a>
+  <div class="sp"></div>
+  <div class="pill" id="hdrinfo">Chess with friends</div>
+  <button class="hbtn" id="btheme" title="Board color" aria-label="Change board color">🎨</button>
+  <button class="hbtn" id="bmute" title="Sound" aria-label="Toggle sound">🔊</button>
+</header>
+
+<!-- SĀKUMLAPA -->
+<main id="home" class="hidden">
+  <section class="hello">
+    <div class="ava big w" id="meava">?</div>
+    <div class="hello-txt">
+      <div class="muted">Hi,</div>
+      <input id="name" maxlength="20" placeholder="enter your name" aria-label="Your name" autocomplete="nickname">
+    </div>
+    <div id="gbox"></div>
+  </section>
+
+  <section class="card play">
+    <div class="tc" id="tc">
+      <button data-m="1" data-i="0">1<small>min</small></button>
+      <button data-m="3" data-i="0">3<small>min</small></button>
+      <button data-m="3" data-i="2">3|2<small>min</small></button>
+      <button data-m="5" data-i="0">5<small>min</small></button>
+      <button data-m="10" data-i="0" class="on">10<small>min</small></button>
+      <button data-m="15" data-i="10">15|10<small>min</small></button>
+      <button data-m="30" data-i="0">30<small>min</small></button>
+      <button data-m="0" data-i="0">∞<small>no clock</small></button>
+    </div>
+    <div class="colors" id="colors">
+      <button data-c="w" title="White"><piece class="king white"></piece></button>
+      <button data-c="r" class="on" title="Random"><span class="rnd"><piece class="king white"></piece><piece class="king black"></piece></span></button>
+      <button data-c="b" title="Black"><piece class="king black"></piece></button>
+    </div>
+    <button class="big" id="create">Play with a link</button>
+    <button class="btn alt" id="local">📱 Play on this device</button>
+  </section>
+
+  <section class="card social">
+    <div class="shead"><h2>Friends</h2><button class="btn small" id="fcopy">+ Add friend</button></div>
+    <input readonly id="flink" class="sr" tabindex="-1" aria-hidden="true">
+    <div id="friends"></div>
+    <div id="onlinewrap" class="hidden"><div class="label">Others online</div><div id="online"></div></div>
+  </section>
+</main>
+
+<div class="modal hidden" id="chal"></div>
+
+<!-- SPĒLE -->
+<main id="game" class="hidden">
+  <div class="boardcol">
+    <div class="pbar" id="ptop"></div>
+    <div class="boardwrap" id="bwrap">
+      <div id="board"></div>
+      <svg id="marks" viewBox="0 0 8 8" aria-hidden="true"></svg>
+      <canvas id="fx" aria-hidden="true"></canvas>
+      <div class="overlay hidden" id="ov"></div>
+    </div>
+    <div class="pbar" id="pbot"></div>
+  </div>
+  <aside class="side">
+    <div class="hd"><span id="sidetitle">Moves</span><span class="tcb" id="tcb"></span></div>
+    <div id="moves"></div>
+    <div class="nav">
+      <button data-nav="first" title="First move">⏮</button>
+      <button data-nav="prev" title="Back (←)">◀</button>
+      <button data-nav="next" title="Forward (→)">▶</button>
+      <button data-nav="last" title="Current position">⏭</button>
+    </div>
+    <div class="offer hidden" id="offer"><b>Opponent offers a draw</b><button class="btn g" id="acc">Accept</button><button class="btn" id="dec">Decline</button></div>
+    <div class="acts" id="acts">
+      <button id="bdraw"><span>½</span>Draw</button>
+      <button id="bresign"><span>⚑</span>Resign</button>
+      <button id="bflip"><span>⇅</span>Flip</button>
+      <button id="bautorot" class="hidden wide"><span>⟳</span>Auto-rotate</button>
+    </div>
+    <div class="status" id="status"></div>
+    <div id="chat">
+      <div id="chatlog"></div>
+      <form id="chatform" autocomplete="off"><input id="chatin" maxlength="200" placeholder="Type a message…"><button class="btn g">➤</button></form>
+    </div>
+  </aside>
+</main>
+
+<footer>Pieces: “cburnett” (CC BY-SA 3.0) · sounds: <a href="https://github.com/pychess/pychess" target="_blank" rel="noopener">PyChess</a> (GPL-3.0) · move logic: chess.js</footer>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { Chess } from 'https://cdn.jsdelivr.net/npm/chess.js@1.0.0/+esm';
+
+const $ = s => document.querySelector(s);
+const NAMES = {p:'pawn',n:'knight',b:'bishop',r:'rook',q:'queen',k:'king'};
+const VAL = {p:1,n:3,b:3,r:5,q:9};
+const REASONS = {
+  'mats':'Checkmate','pats':'Stalemate','laiks':'Time ran out','padošanās':'Resignation',
+  'vienošanās':'Agreement','atkārtošanās':'Threefold repetition',
+  'materiāls':'Insufficient material','50 gājieni':'50-move rule','pārtraukta':'Game aborted'
+};
+const store = {
+  get(k){ try{ return localStorage.getItem(k) }catch{ return null } },
+  set(k,v){ try{ localStorage.setItem(k,v) }catch{} }
+};
+
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+function pieceEl(color, type){
+  const p = document.createElement('piece');
+  p.className = `${NAMES[type]} ${color==='w'?'white':'black'}`;
+  return p;
+}
+async function api(path, body){
+  const r = await fetch(path, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  return r.json();
+}
+const serverApi = api;
+
+/* ---------- skaņas (bez failiem, ģenerētas) ---------- */
+let actx, master;
+let muted = store.get('gambits:mute') === '1';
+/* ierakstītas šaha skaņas (PyChess, GPL-3.0), ielādētas vienreiz un atskaņotas bez aiztures */
+const SND_FILES = {
+  move:'move1', moveOpp:'mov2', capture:'capture2', castle:'castle', check:'check1',
+  start:'start1', win:'win1', lose:'lose1', draw:'draw1', notify:'choice', premove:'choice', invalid:'invalid',
+};
+const SND_VOL = {premove:.35, notify:.7, invalid:.5};
+const buffers = {};
+let loading = null;
+function loadSounds(){
+  if(loading || !actx) return loading;
+  const ext = new Audio().canPlayType('audio/ogg; codecs="vorbis"') ? 'ogg' : 'wav';
+  const names = [...new Set(Object.values(SND_FILES))];
+  loading = Promise.all(names.map(async n => {
+    try{
+      const data = await (await fetch(`/s/snd_${n}.${ext}`)).arrayBuffer();
+      buffers[n] = await new Promise((ok, bad) => actx.decodeAudioData(data, ok, bad));
+    }catch{}
+  }));
+  return loading;
+}
+function unlockAudio(){
+  try{
+    if(!actx){
+      actx = new AudioContext();
+      master = actx.createGain(); master.gain.value = 1;
+      master.connect(actx.destination);
+      loadSounds();
+    }
+    actx.resume();
+  }catch{}
+}
+addEventListener('pointerdown', unlockAudio);
+addEventListener('keydown', unlockAudio);
+function play(kind, delay = 0){
+  if(!actx || muted) return;
+  const buf = buffers[SND_FILES[kind]];
+  if(!buf) return;
+  const src = actx.createBufferSource(), g = actx.createGain();
+  src.buffer = buf; g.gain.value = SND_VOL[kind] ?? 1;
+  src.connect(g).connect(master);
+  src.start(actx.currentTime + delay);
+}
+const sound = {
+  move(mine = true){ play(mine ? 'move' : 'moveOpp') },
+  capture(){ play('capture') },
+  castle(){ play('castle') },
+  promote(){ play('move'); play('notify', .08) },
+  check(){ play('check') },
+  premove(){ play('premove') },
+  start(){ play('start') },
+  win(){ play('win') },
+  lose(){ play('lose') },
+  draw(){ play('draw') },
+  notify(){ play('notify') },
+  tick(){ play('invalid') },
+};
+function playFor(m, pos, mine = true){
+  if(!m) return;
+  if(pos.inCheck()) sound.check();
+  else if(m.promotion) sound.promote();
+  else if(m.flags.includes('k') || m.flags.includes('q')) sound.castle();
+  else if(m.captured) sound.capture();
+  else sound.move(mine);
+}
+
+/* konfeti uzvarai */
+function confetti(){
+  const cv = document.getElementById('fx'); if(!cv || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+  cv.width = r.width*dpr; cv.height = r.height*dpr;
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  const cols = ['#86b04f','#f2c46b','#ece7de','#e0574b','#6fa8dc'];
+  const ps = Array.from({length: 140}, () => ({x: r.width/2, y: r.height*.55, vx: (Math.random()-.5)*9, vy: -Math.random()*11-4, s: 4+Math.random()*5, c: cols[Math.random()*cols.length|0], a: Math.random()*6, va: (Math.random()-.5)*.3}));
+  let f = 0;
+  (function tick(){
+    ctx.clearRect(0, 0, r.width, r.height);
+    for(const p of ps){ p.vy += .28; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.a += p.va;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c; ctx.globalAlpha = Math.max(0, 1 - f/110); ctx.fillRect(-p.s/2, -p.s/4, p.s, p.s/2); ctx.restore(); }
+    if(++f < 110) requestAnimationFrame(tick); else ctx.clearRect(0, 0, r.width, r.height);
+  })();
+}
+
+/* galdiņa krāsas */
+const THEMES = [['Wood','#efdcbc','#ad8462'], ['Green','#eeeed2','#769656'], ['Blue','#dee3e6','#8ca2ad'], ['Lilac','#e8e0f0','#9277b0'], ['Marble','#e6e1d8','#8b8378']];
+let theme = +(store.get('gambits:theme') || 0) % THEMES.length;
+function applyTheme(){
+  const [, l, d] = THEMES[theme];
+  document.documentElement.style.setProperty('--light', l);
+  document.documentElement.style.setProperty('--dark', d);
+}
+applyTheme();
+document.getElementById('btheme').onclick = () => {
+  theme = (theme + 1) % THEMES.length; store.set('gambits:theme', theme); applyTheme();
+  toast('Board: ' + THEMES[theme][0]);
+};
+const muteBtn = document.getElementById('bmute');
+muteBtn.textContent = muted ? '🔇' : '🔊';
+muteBtn.onclick = () => {
+  muted = !muted; store.set('gambits:mute', muted ? '1' : '0');
+  muteBtn.textContent = muted ? '🔇' : '🔊';
+  if(!muted){ unlockAudio(); sound.move(); }
+};
+
+/* ---------- identitāte, draugi, izaicinājumi ---------- */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const ME = {pid: store.get('gambits:pid') || '', secret: store.get('gambits:secret') || '', name: store.get('gambits:name') || ''};
+const friends = (() => { try{ return JSON.parse(store.get('gambits:friends') || '{}') || {}; }catch{ return {}; } })();
+const saveFriends = () => store.set('gambits:friends', JSON.stringify(friends));
+const LOBBY = {v:-1, online:[], challenges:[], done:new Set()};
+const HOME = {minutes:10, inc:0, color:'r', active:false};
+
+const removed = (() => { try{ return JSON.parse(store.get('gambits:removed') || '[]') || []; }catch{ return []; } })();
+ME.picture = store.get('gambits:picture') || '';
+function adopt(r){
+  ME.pid = r.pid; ME.secret = r.secret;
+  store.set('gambits:pid', r.pid); store.set('gambits:secret', r.secret);
+  if(r.picture !== undefined){ ME.picture = r.picture; store.set('gambits:picture', r.picture); }
+  if(r.name && !ME.name){ ME.name = r.name; store.set('gambits:name', r.name); }
+  // Google kontam draugi glabājas arī serverī, tāpēc tie parādās visās ierīcēs
+  if(r.friends){
+    for(const k of Object.keys(friends)) if(!(k in r.friends)) delete friends[k];
+    Object.assign(friends, r.friends); saveFriends();
+    removed.length = 0; store.set('gambits:removed', '[]');
+  }
+  drawMe();
+}
+async function hello(){
+  for(let i=0;;i++){
+    try{
+      return adopt(await api('/api/hello', {pid:ME.pid, secret:ME.secret, name:ME.name, friends, removed}));
+    }catch{ await sleep(Math.min(5000, 800*(i+1))); }
+  }
+}
+const isGoogle = () => ME.pid.startsWith('g');
+function drawMe(){
+  const a = document.getElementById('meava'); if(!a) return;
+  if(ME.picture && isGoogle()){ a.innerHTML = ''; const im = new Image(); im.alt = ''; im.referrerPolicy = 'no-referrer'; im.src = ME.picture; a.appendChild(im); }
+  else a.textContent = (ME.name || '?')[0].toUpperCase();
+  const n = document.getElementById('name'); if(n && document.activeElement !== n) n.value = ME.name;
+  drawGoogleBox();
+}
+
+/* --- Google pieteikšanās --- */
+let GCID = '';
+function drawGoogleBox(){
+  const box = document.getElementById('gbox'); if(!box || !GCID) return;
+  if(isGoogle()){
+    if(box.dataset.k === 'in') return; box.dataset.k = 'in';
+    box.innerHTML = '<div class="gsigned">Signed in with Google<br><button id="gout">Sign out</button></div>';
+    box.querySelector('#gout').onclick = () => {
+      try{ google.accounts.id.disableAutoSelect(); }catch{}
+      for(const k of ['pid','secret','picture']) store.set('gambits:'+k, '');
+      location.reload();
+    };
+  } else {
+    if(box.dataset.k === 'out') return; box.dataset.k = 'out';
+    box.innerHTML = '<div id="gbtn"></div>';
+    try{ google.accounts.id.renderButton(box.querySelector('#gbtn'), {theme:'filled_black', shape:'pill', size:'medium', text:'signin', locale:'en'}); }catch{}
+  }
+}
+async function onGoogle(resp){
+  const r = await api('/api/google', {credential: resp.credential, name: ME.name, friends, removed}).catch(() => ({error:'Connection error'}));
+  if(r.error){ toast(r.error); return; }
+  store.set('gambits:gseen', '1');
+  adopt(r); LOBBY.v = -1;
+  toast('Welcome, ' + (r.name || 'player') + '!');
+  renderSocial();
+}
+async function initGoogle(){
+  try{ GCID = (await (await fetch('/api/config')).json()).googleClientId || ''; }catch{}
+  if(!GCID) return;
+  await new Promise((ok, bad) => { const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true; s.onload = ok; s.onerror = bad; document.head.appendChild(s); }).catch(() => {});
+  if(!window.google?.accounts?.id) return;
+  google.accounts.id.initialize({client_id: GCID, callback: onGoogle, auto_select: true, cancel_on_tap_outside: true});
+  drawGoogleBox();
+  // atgriežoties tiek ielogots automātiski, bez klikšķa
+  if(!isGoogle() && store.get('gambits:gseen') === '1') google.accounts.id.prompt();
+}
+function setName(n){
+  n = n.trim().slice(0,20);
+  if(!n || n === ME.name) return;
+  ME.name = n; store.set('gambits:name', n); hello();
+}
+const auth = () => ({pid:ME.pid, secret:ME.secret});
+function addFriend(pid, name){
+  if(!pid || pid === ME.pid) return;
+  const isNew = !friends[pid];
+  friends[pid] = name || friends[pid] || 'Friend'; saveFriends();
+  const i = removed.indexOf(pid); if(i >= 0){ removed.splice(i, 1); store.set('gambits:removed', JSON.stringify(removed)); }
+  if(isNew) api('/api/challenge', {...auth(), to:pid, friend:true}).catch(()=>{});
+  syncFriends();
+  renderSocial();
+}
+function removeFriend(pid){
+  delete friends[pid]; saveFriends();
+  if(!removed.includes(pid)){ removed.push(pid); store.set('gambits:removed', JSON.stringify(removed)); }
+  syncFriends();
+  renderSocial();
+}
+let syncT;
+function syncFriends(){
+  if(!isGoogle()) return;
+  clearTimeout(syncT); syncT = setTimeout(hello, 400);
+}
+async function challenge(pid){
+  const r = await api('/api/challenge', {...auth(), to:pid, minutes:HOME.minutes, inc:HOME.inc, color:HOME.color});
+  if(r.error) toast(r.error);
+}
+
+async function lobbyLoop(){
+  let fails = 0;
+  for(;;){
+    try{
+      const r = await fetch(`/api/lobby?pid=${ME.pid}&secret=${ME.secret}&since=${LOBBY.v}`, {cache:'no-store'});
+      if(r.status === 401){ await hello(); LOBBY.v = -1; continue; }
+      const st = await r.json(); fails = 0;
+      LOBBY.v = st.v; LOBBY.online = st.online; LOBBY.challenges = st.challenges;
+      onLobby();
+    }catch{ fails++; await sleep(Math.min(5000, 800*fails)); }
+  }
+}
+function onLobby(){
+  let changed = false;
+  for(const o of LOBBY.online) if(friends[o.pid] && friends[o.pid] !== o.name){ friends[o.pid] = o.name; changed = true; }
+  for(const c of LOBBY.challenges){
+    const key = c.cid + c.status;
+    if(LOBBY.done.has(key)) continue;
+    if(c.friend){
+      if(c.to === ME.pid && c.status === 'pending'){
+        LOBBY.done.add(key);
+        if(!friends[c.from]){ friends[c.from] = c.fromName || 'Friend'; changed = true; toast(`${c.fromName || 'Someone'} is now your friend`); }
+        api('/api/challenge/answer', {...auth(), cid:c.cid, accept:false}).catch(()=>{});
+      }
+      continue;
+    }
+    if(c.status === 'accepted' && c.game){
+      LOBBY.done.add(key);
+      if(!location.pathname.endsWith('/g/'+c.game)) location.href = '/g/' + c.game;
+    } else if(c.status === 'declined' && c.from === ME.pid){
+      LOBBY.done.add(key); toast(`${c.toName || 'Your friend'} declined the challenge`);
+    }
+  }
+  if(changed){ saveFriends(); syncFriends(); }
+  drawChallengeModal();
+  renderSocial();
+}
+function drawChallengeModal(){
+  const m = $('#chal');
+  const inc = LOBBY.challenges.find(c => !c.friend && c.to === ME.pid && c.status === 'pending');
+  const out = LOBBY.challenges.find(c => !c.friend && c.from === ME.pid && c.status === 'pending');
+  const c = inc || out;
+  if(!c){ m.classList.add('hidden'); m.dataset.k = ''; return; }
+  m.classList.remove('hidden');
+  if(m.dataset.k === c.cid) return;
+  m.dataset.k = c.cid;
+  const tc = c.minutes === 0 ? 'no clock' : `${c.minutes} min` + (c.inc ? ` + ${c.inc} s` : '');
+  if(inc){
+    sound.start();
+    m.innerHTML = `<div class="ocard"><div style="font-size:42px">♞</div><h3></h3><p>Chess · ${tc}</p>
+      <div class="res-btns"><button class="btn g" id="cy">Play</button><button class="btn" id="cn">Decline</button></div></div>`;
+    m.querySelector('h3').textContent = `${c.fromName || 'A friend'} challenges you!`;
+    m.querySelector('#cy').onclick = async () => {
+      unlockAudio();
+      const r = await api('/api/challenge/answer', {...auth(), cid:c.cid, accept:true});
+      if(r.game) location.href = '/g/' + r.game; else toast(r.error || 'Something went wrong');
+    };
+    m.querySelector('#cn').onclick = () => api('/api/challenge/answer', {...auth(), cid:c.cid, accept:false});
+  } else {
+    m.innerHTML = `<div class="ocard"><div class="spinner"></div><h3></h3><p>Chess · ${tc}</p>
+      <button class="btn" id="cc" style="width:100%">Cancel</button></div>`;
+    m.querySelector('h3').textContent = `Waiting for ${c.toName || 'your friend'} to answer…`;
+    m.querySelector('#cc').onclick = () => api('/api/challenge/cancel', {...auth(), cid:c.cid});
+  }
+}
+function renderSocial(){
+  if(!HOME.active) return;
+  const on = new Map(LOBBY.online.map(o => [o.pid, o]));
+  $('#flink').value = location.origin + '/f/' + ME.pid;
+  const row = (pid, name, o, isFriend) => {
+    const st = !o ? 'Offline' : o.status === 'playing' ? 'Playing' : 'Online';
+    const free = o && o.status === 'free';
+    return `<div class="prow ${o ? '' : 'off'}"><div class="ava w">${esc((name||'?')[0].toUpperCase())}</div>
+      <div class="nm">${esc(name)}<small><i class="dot ${o?'on':''}"></i>${st}</small></div>
+      ${isFriend ? '' : `<button class="btn small" data-add="${pid}" title="Add friend">+</button>`}
+      ${free ? `<button class="btn g small" data-ch="${pid}">Challenge</button>` : ''}
+      ${isFriend ? `<button class="x" data-rm="${pid}" title="Remove friend" aria-label="Remove friend">✕</button>` : ''}</div>`;
+  };
+  const fr = Object.entries(friends);
+  fr.sort((a,b) => (on.has(b[0]) - on.has(a[0])) || a[1].localeCompare(b[1]));
+  $('#friends').innerHTML = fr.length ? '<div class="plist">' + fr.map(([p,n]) => row(p, n, on.get(p), true)).join('') + '</div>'
+    : '<div class="none">No friends yet. Tap “+ Add friend” and send the link.</div>';
+  const others = LOBBY.online.filter(o => o.pid !== ME.pid && !friends[o.pid]);
+  $('#onlinewrap').classList.toggle('hidden', !others.length);
+  $('#online').innerHTML = '<div class="plist">' + others.map(o => row(o.pid, o.name, o, false)).join('') + '</div>';
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-ch],[data-add],[data-rm]'); if(!b) return;
+  unlockAudio();
+  if(b.dataset.ch) challenge(b.dataset.ch);
+  if(b.dataset.add){ const o = LOBBY.online.find(x => x.pid === b.dataset.add); addFriend(b.dataset.add, o?.name); toast('Added to friends'); }
+  if(b.dataset.rm) removeFriend(b.dataset.rm);
+});
+
+/* ---------- maršrutēšana ---------- */
+(async () => {
+  await hello();
+  initGoogle();
+  const gameId = location.pathname === '/local' ? 'local' : (location.pathname.match(/^\/g\/([a-z0-9]+)/) || [])[1];
+  const friendId = (location.pathname.match(/^\/f\/([a-z0-9]+)/) || [])[1];
+  if(friendId){
+    history.replaceState(null, '', '/');
+    if(friendId !== ME.pid){ addFriend(friendId); toast('Friend added! Challenge them when they are online.'); }
+  }
+  if(gameId) initGame(gameId); else initHome();
+  lobbyLoop();
+})();
+
+/* ---------- SĀKUMLAPA ---------- */
+function initHome(){
+  HOME.active = true;
+  $('#home').classList.remove('hidden');
+  $('#name').value = ME.name;
+  $('#name').onchange = () => setName($('#name').value);
+  $('#name').onkeydown = e => { if(e.key === 'Enter') e.target.blur(); };
+  drawMe();
+  $('#fcopy').onclick = () => {
+    const url = location.origin + '/f/' + ME.pid;
+    // telefonā atver kopīgošanas izvēlni (WhatsApp, Messenger u.c.), datorā nokopē
+    if(navigator.share && matchMedia('(pointer:coarse)').matches){
+      navigator.share({title:'Gambit', text:'Add me on Gambit and let’s play chess!', url}).catch(()=>{});
+      return;
+    }
+    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
+      .then(() => toast('Friend link copied — send it to your friend'))
+      .catch(() => { $('#flink').select(); document.execCommand('copy'); toast('Friend link copied'); });
+  };
+  renderSocial();
+  $('#tc').onclick = e => {
+    const b = e.target.closest('button'); if(!b) return;
+    $('#tc .on')?.classList.remove('on'); b.classList.add('on');
+    HOME.minutes = +b.dataset.m; HOME.inc = +b.dataset.i;
+  };
+  $('#colors').onclick = e => {
+    const b = e.target.closest('button'); if(!b) return;
+    $('#colors .on')?.classList.remove('on'); b.classList.add('on');
+    HOME.color = b.dataset.c;
+  };
+  $('#local').onclick = () => { unlockAudio(); location.href = `/local?m=${HOME.minutes}&i=${HOME.inc}`; };
+  $('#create').onclick = async () => {
+    setName($('#name').value);
+    const {minutes, inc, color} = HOME;
+    $('#create').disabled = true; $('#create').textContent = 'Creating…';
+    try{
+      const r = await api('/api/new', {minutes, inc, color});
+      location.href = '/g/' + r.id;
+    }catch{
+      $('#create').disabled = false; $('#create').textContent = 'Play with a link';
+      toast('Could not reach the server');
+    }
+  };
+}
+
+/* ---------- SPĒLE ---------- */
+/* --- spēle uz vienas ierīces: tas pats, ko dara serveris, tikai pārlūkā --- */
+class LocalGame {
+  constructor(minutes, inc){
+    this.minutes = minutes; this.inc = inc; this.v = 0; this.gen = 0;
+    this.waiters = [];
+    this.reset();
+  }
+  reset(){
+    this.gen++; this.moves = []; this.lastMoveAt = null;
+    this.clock = {w: this.minutes*60000, b: this.minutes*60000};
+    this.result = null; this.reason = null;
+  }
+  turn(){ return this.moves.length % 2 ? 'b' : 'w'; }
+  running(){ return this.minutes > 0 && !this.result && this.moves.length >= 2; }
+  live(){
+    const c = {...this.clock};
+    if(this.running() && this.lastMoveAt){ const t = this.turn(); c[t] = Math.max(0, c[t] - (Date.now() - this.lastMoveAt)); }
+    return c;
+  }
+  bump(){ this.v++; const w = this.waiters; this.waiters = []; w.forEach(f => f()); }
+  finish(result, reason){ this.result = result; this.reason = reason; this.bump(); }
+  state(){
+    const pl = n => ({taken: true, name: n, online: true, pid: null});
+    return {id: 'local', v: this.v, gen: this.gen, moves: [...this.moves], minutes: this.minutes, inc: this.inc,
+      clock: this.live(), running: this.running(), result: this.result, reason: this.reason,
+      drawOffer: null, rematch: [], players: {w: pl('White'), b: pl('Black')}, chat: [], you: this.turn()};
+  }
+  wait(since){ return since < this.v ? Promise.resolve() : new Promise(r => this.waiters.push(r)); }
+  call(path, d){
+    if(path === '/api/join') return {color: this.turn(), token: 'local'};
+    if(path === '/api/move'){
+      if(this.result) return {error: 'The game is over'};
+      const me = this.turn(), t = Date.now();
+      if(this.running() && this.lastMoveAt) this.clock[me] = Math.max(0, this.clock[me] - (t - this.lastMoveAt)) + this.inc*1000;
+      this.moves.push(d.uci); this.lastMoveAt = t;
+      if(d.end) this.finish(d.end.result, d.end.reason); else this.bump();
+      return {ok: true};
+    }
+    if(path === '/api/action'){
+      const me = this.turn();
+      if(d.type === 'flag'){ const c = this.live(); if(this.running() && c[me] <= 0){ this.clock = c; this.finish(me==='w'?'0-1':'1-0', 'laiks'); } }
+      else if(d.type === 'resign' && !this.result) this.finish(me==='w'?'0-1':'1-0', 'padošanās');
+      else if(d.type === 'abort' && !this.result) this.finish('*', 'pārtraukta');
+      else if(d.type === 'draw_offer' && !this.result) this.finish('1/2-1/2', 'vienošanās');
+      else if(d.type === 'rematch'){ this.reset(); this.bump(); }
+      return {ok: true};
+    }
+    return {error: 'Not available offline'};
+  }
+}
+
+function initGame(id){
+  // vienas ierīces spēlē visi „servera” pieprasījumi paliek pārlūkā
+  const localMode = id === 'local';
+  let LG = null;
+  if(localMode){
+    const p = new URLSearchParams(location.search);
+    LG = new LocalGame(Math.min(180, Math.max(0, +p.get('m') || 0)), Math.min(60, Math.max(0, +p.get('i') || 0)));
+    document.body.classList.add('local');
+  }
+  const api = localMode ? (path, body) => Promise.resolve(LG.call(path, body)) : serverApi;
+  $('#game').classList.remove('hidden');
+  const S = {
+    id, token: ME.secret, me: null,
+    st: null, v: -1, chess: new Chess(), view: null, flip: false,
+    sel: null, targets: [], pending: false, recvAt: 0, flagSent: false, chatN: 0,
+    promo: null, ended: false, gen: null, minPly: 0, premove: null, marks: [],
+  };
+  const link = location.origin + '/g/' + id;
+  let squares = {};
+
+  // vienas ierīces spēlē galdiņš var griezties pret to, kura gājiens (iestatāms)
+  S.autoRotate = store.get('gambits:autorotate') !== '0';
+  const orient = () => {
+    const o = localMode && !S.autoRotate ? 'w' : S.me === 'b' ? 'b' : 'w';
+    return S.flip ? (o==='w'?'b':'w') : o;
+  };
+  const live = () => S.view === null;
+  const shown = () => {
+    if(live()) return S.chess;
+    const c = new Chess(); const h = S.chess.history({verbose:true});
+    for(let i=0;i<S.view;i++) c.move(h[i].san);
+    return c;
+  };
+
+  /* --- galdiņa uzbūve --- */
+  function buildBoard(){
+    const b = $('#board'); b.innerHTML = ''; squares = {};
+    const o = orient();
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const file = o==='w' ? c : 7-c, rank = o==='w' ? 8-r : r+1;
+      const sq = 'abcdefgh'[file] + rank;
+      const d = document.createElement('div');
+      d.className = 'sq ' + ((file+rank)%2 ? 'l' : 'd');
+      d.dataset.sq = sq;
+      if(c===0){ const s=document.createElement('span'); s.className='cr'; s.textContent=rank; d.appendChild(s); }
+      if(r===7){ const s=document.createElement('span'); s.className='cf'; s.textContent='abcdefgh'[file]; d.appendChild(s); }
+      b.appendChild(d); squares[sq] = d;
+    }
+  }
+  function sqAt(x, y){
+    const r = $('#board').getBoundingClientRect();
+    const c = Math.floor((x-r.left)/r.width*8), w = Math.floor((y-r.top)/r.height*8);
+    if(c<0||c>7||w<0||w>7) return null;
+    const o = orient();
+    return 'abcdefgh'[o==='w'?c:7-c] + (o==='w'?8-w:w+1);
+  }
+  function coords(sq){
+    const f = sq.charCodeAt(0)-97, rk = +sq[1], o = orient();
+    return o==='w' ? [f, 8-rk] : [7-f, rk-1];
+  }
+
+  /* --- zīmēšana --- */
+  function drawBoard(anim){
+    const pos = shown(), o = orient();
+    const hist = pos.history({verbose:true}), last = hist[hist.length-1];
+    let chk = null;
+    if(pos.inCheck()){
+      const t = pos.turn();
+      for(const row of pos.board()) for(const p of row) if(p && p.type==='k' && p.color===t) chk = p.square;
+    }
+    const tg = new Map(S.targets.map(m => [m.to, m]));
+    const canMove = myTurn() || canPremove();
+    $('#bwrap').classList.toggle('mine', canMove);
+    const pm = live() ? S.premove : null;
+    for(const [sq, d] of Object.entries(squares)){
+      d.querySelector('piece')?.remove();
+      const p = pos.get(sq);
+      if(p){ const e = pieceEl(p.color, p.type); if(p.color===S.me) e.classList.add('me'); d.appendChild(e); }
+      d.classList.toggle('last', !!last && (last.from===sq || last.to===sq));
+      d.classList.toggle('sel', S.sel===sq);
+      d.classList.toggle('chk', chk===sq);
+      d.classList.toggle('tgt', tg.has(sq));
+      d.classList.toggle('cap', tg.has(sq) && (!!p || tg.get(sq).flags.includes('e')));
+      d.classList.toggle('pre', !!pm && (pm.from===sq || pm.to===sq));
+    }
+    // priekšgājienā figūru rāda jau mērķa lauciņā
+    if(pm){
+      const a = squares[pm.from].querySelector('piece');
+      if(a){ squares[pm.to].querySelector('piece')?.remove(); squares[pm.to].appendChild(a); a.classList.add('ghosted'); }
+    }
+    drawMarks();
+    if(anim && last){
+      const e = squares[last.to].querySelector('piece');
+      const [fx,fy] = coords(last.from), [tx,ty] = coords(last.to);
+      if(e){
+        e.style.transform = `translate(${(fx-tx)*100}%,${(fy-ty)*100}%)`;
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{ e.classList.add('anim'); e.style.transform=''; }));
+      }
+      if(last.flags.includes('k') || last.flags.includes('q')){
+        const rf = last.flags.includes('k') ? ['h','f'] : ['a','d'];
+        const rr = last.from[1], re = squares[rf[1]+rr].querySelector('piece');
+        const [ax,ay] = coords(rf[0]+rr), [bx,by] = coords(rf[1]+rr);
+        if(re){ re.style.transform=`translate(${(ax-bx)*100}%,${(ay-by)*100}%)`;
+          requestAnimationFrame(()=>requestAnimationFrame(()=>{ re.classList.add('anim'); re.style.transform=''; })); }
+      }
+    }
+  }
+
+  function drawMarks(){
+    const svg = $('#marks'); if(!svg) return;
+    const c = sq => { const [x, y] = coords(sq); return [x + .5, y + .5]; };
+    let html = '<defs><marker id="ah" markerWidth="4" markerHeight="4" refX="2.2" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4 z" fill="var(--arrow)"/></marker></defs>';
+    for(const m of S.marks){
+      if(m[0] === 'c'){ const [x, y] = c(m.slice(1)); html += `<circle cx="${x}" cy="${y}" r=".44" fill="none" stroke="var(--arrow)" stroke-width=".07"/>`; }
+      else {
+        const [x1, y1] = c(m.slice(1,3)), [x2, y2] = c(m.slice(3,5));
+        const len = Math.hypot(x2-x1, y2-y1), k = (len - .32) / len;
+        html += `<line x1="${x1}" y1="${y1}" x2="${x1+(x2-x1)*k}" y2="${y1+(y2-y1)*k}" stroke="var(--arrow)" stroke-width=".17" stroke-linecap="round" marker-end="url(#ah)"/>`;
+      }
+    }
+    svg.innerHTML = html;
+  }
+
+  function material(pos){
+    const init = {p:8,n:2,b:2,r:2,q:1}, have = {w:{p:0,n:0,b:0,r:0,q:0}, b:{p:0,n:0,b:0,r:0,q:0}};
+    for(const row of pos.board()) for(const p of row) if(p && p.type!=='k') have[p.color][p.type]++;
+    const score = c => Object.entries(have[c]).reduce((s,[t,n])=>s+VAL[t]*n,0);
+    const lost = c => { const o={}; for(const t in init) o[t]=Math.max(0, init[t]-have[c][t]); return o; };
+    return {lost:{w:lost('w'), b:lost('b')}, diff: score('w')-score('b')};
+  }
+
+  function fmt(ms){
+    if(ms == null) return '';
+    ms = Math.max(0, ms);
+    if(ms < 10000) return (ms/1000).toFixed(1);
+    const s = Math.ceil(ms/1000);
+    return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+  }
+  function liveClock(){
+    const st = S.st; if(!st || st.minutes === 0) return null;
+    const c = {...st.clock};
+    if(st.running && !st.result){
+      const t = S.chess.turn();
+      c[t] = c[t] - (performance.now() - S.recvAt);
+    }
+    return c;
+  }
+
+  function drawBars(){
+    const st = S.st; if(!st) return;
+    const o = orient(), mat = material(shown());
+    const bar = (el, c) => {
+      const pl = st.players[c], other = c==='w'?'b':'w';
+      let name = pl.name || (pl.taken ? (c==='w'?'White':'Black') : 'Waiting for opponent…');
+      if(c === S.me && !localMode) name += ' (you)';
+      const lost = mat.lost[other];
+      let caps = '';
+      for(const t of ['p','b','n','r','q']) if(lost[t]){
+        for(let i=0;i<lost[t];i++) caps += `<piece class="${NAMES[t]} ${other==='w'?'white':'black'}"></piece>`;
+        caps += '<span class="gap"></span>';
+      }
+      const adv = c==='w' ? mat.diff : -mat.diff;
+      if(adv>0) caps += `<span class="adv">+${adv}</span>`;
+      el.innerHTML = `<div class="ava ${c}">${(pl.name||'?')[0].toUpperCase()}</div>
+        <div class="pinfo"><div class="pname"><i class="dot ${pl.online?'on':''}" title="${pl.online?'Online':'Offline'}"></i>${esc(name)}</div>
+        <div class="caps">${caps}</div></div>
+        <div class="clock" data-c="${c}"></div>`;
+    };
+    bar($('#ptop'), o==='w'?'b':'w');
+    bar($('#pbot'), o);
+    drawClocks();
+  }
+  function drawClocks(){
+    const c = liveClock(), st = S.st;
+    document.querySelectorAll('.clock').forEach(el => {
+      const col = el.dataset.c;
+      if(!c){ el.className = 'clock none'; return; }
+      el.textContent = fmt(c[col]);
+      const act = !st.result && S.chess.turn()===col && st.players.w.taken && st.players.b.taken;
+      el.className = 'clock' + (act?' act':'') + (c[col] < 20000 ? ' low' : '');
+      // viens brīdinājums, kad paliek 10 sekundes
+      if(act && col === S.me && c[col] < 10000 && c[col] > 0 && !S.warned){ S.warned = true; sound.tick(); }
+      if(c[col] >= 10000 && col === S.me) S.warned = false;
+    });
+    if(c && st.running && !st.result && !S.flagSent){
+      const t = S.chess.turn();
+      if(c[t] <= 0){ S.flagSent = true; api('/api/action', {id:S.id, token:S.token, type:'flag'}).catch(()=>{}); }
+    }
+  }
+  setInterval(drawClocks, 100);
+
+  function drawMoves(){
+    const h = S.chess.history(), cur = live() ? h.length : S.view;
+    let html = '';
+    for(let i=0;i<h.length;i+=2){
+      html += `<div class="mrow"><span class="n">${i/2+1}.</span>
+        <span class="mv ${cur===i+1?'cur':''}" data-p="${i+1}">${h[i]}</span>
+        ${h[i+1] ? `<span class="mv ${cur===i+2?'cur':''}" data-p="${i+2}">${h[i+1]}</span>` : '<span></span>'}</div>`;
+    }
+    const m = $('#moves'), atEnd = m.scrollTop + m.clientHeight >= m.scrollHeight - 30;
+    m.innerHTML = html || '<div style="padding:14px;color:var(--muted)">No moves yet</div>';
+    if(live() || atEnd) m.scrollTop = m.scrollHeight;
+  }
+
+  function drawStatus(){
+    const st = S.st, el = $('#status'); if(!st) return;
+    el.classList.remove('you');
+    if(st.result){
+      el.textContent = resultText(st) + ' · ' + (REASONS[st.reason]||st.reason||'');
+    } else if(!(st.players.w.taken && st.players.b.taken)){
+      el.textContent = 'Waiting for the other player…';
+    } else if(!S.me){
+      el.textContent = 'Spectating · ' + (S.chess.turn()==='w'?'White':'Black') + ' to move';
+    } else if(localMode){
+      el.textContent = (S.chess.turn()==='w' ? 'White' : 'Black') + (S.chess.inCheck() ? ' is in check!' : ' to move'); el.classList.add('you');
+    } else if(myTurn()){
+      el.textContent = S.chess.inCheck() ? 'Check! Your move' : 'Your move'; el.classList.add('you');
+    } else el.textContent = 'Opponent’s move…';
+    if(!live()) el.textContent = `Viewing move ${S.view} — press ⏭ to return`;
+
+    const playing = S.me && !st.result;
+    const early = S.chess.history().length < 2;
+    $('#bresign').innerHTML = early && playing ? '<span>✕</span>Abort' : '<span>⚑</span>Resign';
+    $('#bresign').disabled = !playing;
+    $('#bdraw').disabled = !playing || early || st.drawOffer === S.me;
+    $('#bdraw').innerHTML = st.drawOffer === S.me ? '<span>½</span>Offered' : '<span>½</span>Draw';
+    $('#offer').classList.toggle('hidden', !(playing && st.drawOffer && st.drawOffer !== S.me));
+    const tc = st.minutes === 0 ? 'No clock' : `${st.minutes} min` + (st.inc ? ` | ${st.inc} s` : '');
+    $('#tcb').textContent = tc;
+    $('#hdrinfo').textContent = localMode ? 'Same device' : S.me ? `You play ${S.me==='w'?'White':'Black'}` : 'Spectator';
+    if(localMode){
+      $('#bautorot').classList.remove('hidden');
+      $('#bautorot').innerHTML = `<span>⟳</span>Auto-rotate: ${S.autoRotate ? 'On' : 'Off'}`;
+      $('#bautorot').classList.toggle('on', S.autoRotate);
+    }
+    document.title = (S.me && myTurn() && !st.result && !localMode ? '● Your move — ' : '') + 'Gambit';
+  }
+  function resultText(st){
+    if(st.result === '*') return 'Game aborted';
+    if(st.result === '1/2-1/2') return 'Draw';
+    const w = st.result === '1-0' ? 'w' : 'b';
+    if(S.me && !localMode) return w === S.me ? 'You won!' : 'You lost';
+    return (w==='w'?'White':'Black') + ' wins';
+  }
+
+  function drawOverlay(){
+    const st = S.st, ov = $('#ov');
+    if(!st){ ov.classList.add('hidden'); return; }
+    if(!(st.players.w.taken && st.players.b.taken) && !st.result){
+      ov.classList.remove('hidden');
+      if(ov.dataset.k === 'wait') return;
+      ov.dataset.k = 'wait';
+      ov.innerHTML = `<div class="ocard"><div class="spinner"></div>
+        <h3>Waiting for your friend</h3><p>Send this link — the game starts when your friend opens it.</p>
+        <div class="linkrow"><input readonly value="${link}" id="lnk"><button class="btn g" id="cp">Copy</button></div>
+        ${navigator.share ? '<button class="btn" id="sh" style="margin-top:10px;width:100%">Share…</button>' : ''}</div>`;
+      $('#lnk').onclick = e => e.target.select();
+      $('#cp').onclick = copyLink;
+      $('#sh') && ($('#sh').onclick = () => navigator.share({title:'Play chess with me!', url:link}).catch(()=>{}));
+      return;
+    }
+    if(st.result && S.showResult){
+      ov.classList.remove('hidden');
+      const opp = S.me ? st.players[S.me==='w'?'b':'w'] : null;
+      const canAdd = !!(opp && opp.pid && opp.pid !== ME.pid && !friends[opp.pid]);
+      const k = 'res'+st.v+canAdd; if(ov.dataset.k === k) return; ov.dataset.k = k;
+      const wantMe = st.rematch.includes(S.me), wantThem = st.rematch.some(c => c !== S.me);
+      ov.innerHTML = `<div class="ocard">
+        <div class="res-big">${st.result==='1/2-1/2'?'½–½':st.result==='*'?'—':st.result.replace('-','–')}</div>
+        <h3>${resultText(st)}</h3><p>${REASONS[st.reason]||st.reason||''}</p>
+        ${S.me ? `<div class="res-btns">
+          <button class="btn g" id="rm" ${wantMe?'disabled':''}>${wantMe?'Waiting for opponent…':wantThem?'Accept rematch':'Rematch'}</button>
+          <button class="btn" id="nw">New game</button></div>
+          ${wantThem && !wantMe ? '<p style="margin:12px 0 0;color:var(--accent2)">Your opponent wants a rematch!</p>':''}` : ''}
+        ${canAdd ? '<button class="btn" id="af" style="margin-top:8px;width:100%">+ Add opponent as friend</button>' : ''}
+        <button class="btn" id="cl" style="margin-top:8px;width:100%;background:none;color:var(--muted)">View board</button></div>`;
+      $('#af') && ($('#af').onclick = () => { addFriend(opp.pid, opp.name); toast('Added to friends'); ov.dataset.k = ''; drawOverlay(); });
+      $('#rm') && ($('#rm').onclick = () => api('/api/action', {id:S.id, token:S.token, type:'rematch'}));
+      $('#nw') && ($('#nw').onclick = () => location.href = '/');
+      $('#cl').onclick = () => { S.showResult = false; ov.classList.add('hidden'); ov.dataset.k=''; };
+      return;
+    }
+    ov.classList.add('hidden'); ov.dataset.k = '';
+  }
+
+  function drawChat(){
+    const msgs = S.st?.chat || [];
+    if(msgs.length === S.chatN && S.chatKey === msgs[msgs.length-1]?.t) return;
+    S.chatN = msgs.length; S.chatKey = msgs[msgs.length-1]?.t;
+    const log = $('#chatlog');
+    log.innerHTML = msgs.length ? msgs.map(m => m.who
+      ? `<div><b class="${m.c||'s'}">${esc(m.who)}:</b> ${esc(m.text)}</div>`
+      : `<div class="sys">${esc(m.text)}</div>`).join('')
+      : '<div class="sys">Chat — say hi to your opponent! 👋</div>';
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function drawAll(anim){ drawBoard(anim); drawBars(); drawMoves(); drawStatus(); drawOverlay(); drawChat(); }
+
+  /* --- servera stāvokļa pielietošana --- */
+  function applyState(st){
+    const prev = S.st;
+    S.st = st; S.recvAt = performance.now(); S.flagSent = false;
+    if(st.you !== undefined && st.you !== S.me && S.token){
+      const before = orient(); S.me = st.you;
+      if(orient() !== before) buildBoard();
+    }
+    if(st.gen !== S.gen){ S.gen = st.gen; S.minPly = 0; S.premove = null; S.marks = []; }
+    const local = S.chess.history({verbose:true}).map(m => m.from+m.to+(m.promotion||''));
+    const same = local.length === st.moves.length && local.every((m,i)=>m===st.moves[i]);
+    // serveris vēl nav redzējis manu gājienu: neatceļ to un neanimē otrreiz
+    const stale = st.moves.length < S.minPly;
+    let anim = false;
+    if(!same && !S.pending && !stale){
+      const isNext = st.moves.length === local.length+1 && local.every((m,i)=>m===st.moves[i]);
+      const c = new Chess();
+      try{ for(const u of st.moves) c.move({from:u.slice(0,2), to:u.slice(2,4), promotion:u[4]}); }catch{}
+      S.chess = c; S.sel = null; S.targets = [];
+      if(isNext){ anim = true; if(live()){ const lm = c.history({verbose:true}).pop(); playFor(lm, c, lm.color === S.me); } }
+      if(S.view !== null && S.view > c.history().length) S.view = null;
+      if(st.moves.length === 0 && local.length > 0){ S.view = null; sound.start(); }
+      S.minPly = 0;
+    }
+    if(prev && prev.result && !st.result) sound.start();
+    if(prev && !prev.result && st.result){
+      S.showResult = true; S.premove = null;
+      const won = localMode ? (st.result==='1-0' || st.result==='0-1')
+        : S.me && ((st.result==='1-0' && S.me==='w') || (st.result==='0-1' && S.me==='b'));
+      const lost = S.me && !won && st.result !== '1/2-1/2' && st.result !== '*';
+      won ? sound.win() : lost ? sound.lose() : sound.draw();
+      if(won) confetti();
+    }
+    if(!st.result) S.showResult = false;
+    if(prev && !(prev.players.w.taken && prev.players.b.taken) && st.players.w.taken && st.players.b.taken){ sound.start(); toast('Your opponent joined!'); }
+    if(prev && st.drawOffer && st.drawOffer !== S.me && prev.drawOffer !== st.drawOffer){ sound.notify(); toast('Your opponent offers a draw'); }
+    drawAll(anim);
+    if(anim && S.premove) setTimeout(runPremove, 180);
+  }
+
+  /* --- priekšgājiens: gājiens, ko ievada, kamēr pretinieks domā --- */
+  function premoveTargets(sq){
+    const fen = S.chess.fen().split(' ');
+    fen[1] = S.me; fen[3] = '-';
+    try{
+      const c = new Chess(fen.join(' '), {skipValidation:true});
+      const ms = c.moves({square:sq, verbose:true});
+      // bandinieks var premove sist pa diagonāli arī tad, ja tur vēl nav figūras
+      const p = c.get(sq);
+      if(p && p.type === 'p'){
+        const dir = S.me === 'w' ? 1 : -1, f = sq.charCodeAt(0), r = +sq[1] + dir;
+        for(const df of [-1, 1]){
+          const to = String.fromCharCode(f+df) + r;
+          if(r>=1 && r<=8 && f+df>=97 && f+df<=104 && !ms.some(m=>m.to===to)) ms.push({from:sq, to, flags:'c'});
+        }
+      }
+      return ms;
+    }catch{ return []; }
+  }
+  function canPremove(){
+    const st = S.st;
+    return !!(st && S.me && !st.result && live() && S.chess.turn() !== S.me && st.players.w.taken && st.players.b.taken);
+  }
+  function runPremove(){
+    const pm = S.premove; S.premove = null;
+    if(!pm || !myTurn()){ drawBoard(false); return; }
+    const opts = S.chess.moves({square:pm.from, verbose:true}).filter(m => m.to === pm.to);
+    if(!opts.length){ drawBoard(false); return; }
+    doMove(pm.from, pm.to, opts.some(m => m.promotion) ? 'q' : undefined, true);
+  }
+
+  function myTurn(){
+    const st = S.st;
+    return !!(st && S.me && !st.result && live() && S.chess.turn() === S.me &&
+      st.players.w.taken && st.players.b.taken);
+  }
+
+  /* --- gājieni --- */
+  function select(sq){
+    S.sel = sq;
+    S.targets = !sq ? [] : myTurn() ? S.chess.moves({square:sq, verbose:true}) : premoveTargets(sq);
+    drawBoard(false);
+  }
+  function tryMove(from, to, animate){
+    if(!myTurn()){
+      if(!premoveTargets(from).some(m => m.to === to)) return false;
+      S.premove = {from, to}; S.sel = null; S.targets = [];
+      sound.premove(); drawBoard(false);
+      return true;
+    }
+    const opts = S.chess.moves({square:from, verbose:true}).filter(m => m.to === to);
+    if(!opts.length) return false;
+    if(opts.some(m => m.promotion)){ askPromo(from, to); return true; }
+    doMove(from, to, undefined, animate);
+    return true;
+  }
+  function askPromo(from, to){
+    const box = document.createElement('div'); box.className = 'promo';
+    const [x, y] = coords(to), bs = $('#bwrap').clientWidth / 8;
+    box.style.left = x*bs + 'px';
+    if(y === 0) box.style.top = '0'; else box.style.bottom = '0';
+    for(const t of ['q','n','r','b']){
+      const b = document.createElement('button'); b.appendChild(pieceEl(S.me, t));
+      b.onclick = e => { e.stopPropagation(); box.remove(); doMove(from, to, t); };
+      box.appendChild(b);
+    }
+    box.addEventListener('pointerdown', e => e.stopPropagation());
+    $('#bwrap').appendChild(box);
+    S.promo = box;
+  }
+  function doMove(from, to, promotion, animate){
+    let m;
+    try{ m = S.chess.move({from, to, promotion}); }catch{ return; }
+    S.sel = null; S.targets = []; S.marks = [];
+    playFor(m, S.chess);
+    let end = null;
+    if(S.chess.isCheckmate()) end = {result: S.me==='w'?'1-0':'0-1', reason:'mats'};
+    else if(S.chess.isStalemate()) end = {result:'1/2-1/2', reason:'pats'};
+    else if(S.chess.isInsufficientMaterial()) end = {result:'1/2-1/2', reason:'materiāls'};
+    else if(S.chess.isThreefoldRepetition()) end = {result:'1/2-1/2', reason:'atkārtošanās'};
+    else if(S.chess.isDraw()) end = {result:'1/2-1/2', reason:'50 gājieni'};
+    S.pending = true;
+    S.minPly = S.chess.history().length;
+    drawBoard(!!animate); drawMoves(); drawStatus(); drawBars();
+    const resync = msg => { toast(msg); S.minPly = 0; S.chess = new Chess(); S.v = -1; if(S.st) applyState(S.st); };
+    api('/api/move', {id:S.id, token:S.token, uci: from+to+(promotion||''), ply: S.chess.history().length-1, end})
+      .then(r => { S.pending = false; if(r.error) resync(r.error); })
+      .catch(() => { S.pending = false; resync('Connection error'); });
+  }
+
+  /* --- vilkšana un klikšķi --- */
+  let drag = null, rdrag = null;
+  $('#board').addEventListener('contextmenu', e => e.preventDefault());
+  $('#board').addEventListener('pointerdown', e => {
+    if(S.promo){ S.promo.remove(); S.promo = null; drawBoard(false); }
+    const sq = sqAt(e.clientX, e.clientY); if(!sq) return;
+    if(e.button === 2){
+      // labā poga: bultas un iezīmes, kā analīzes dēlī
+      if(S.premove){ S.premove = null; drawBoard(false); return; }
+      rdrag = {from: sq};
+      return;
+    }
+    if(e.button !== 0) return;
+    if(S.marks.length){ S.marks = []; drawMarks(); }
+    const active = myTurn() || canPremove();
+    if(!active){ if(S.sel) select(null); return; }
+    if(S.premove && !S.sel){ S.premove = null; drawBoard(false); }
+    if(S.sel && S.sel !== sq && tryMove(S.sel, sq, true)) return;
+    const p = S.chess.get(sq);
+    if(p && p.color === S.me){
+      const again = S.sel === sq;
+      select(sq);
+      const src = squares[sq].querySelector('piece');
+      const g = pieceEl(p.color, p.type); g.classList.add('ghost');
+      const size = $('#board').clientWidth / 8;
+      g.style.width = g.style.height = size + 'px';
+      g.style.left = (e.clientX - size/2) + 'px'; g.style.top = (e.clientY - size/2) + 'px';
+      g.style.opacity = '0';
+      document.body.appendChild(g);
+      drag = {from: sq, g, src, size, again, moved: false, hover: null, x: e.clientX, y: e.clientY};
+      $('#board').setPointerCapture(e.pointerId);
+    } else select(null);
+  });
+  $('#board').addEventListener('pointermove', e => {
+    if(!drag) return;
+    // mazs pirksta trīcējums vēl nav vilkšana
+    if(!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 4) return;
+    if(!drag.moved){ drag.g.style.opacity = ''; drag.src?.classList.add('dragging'); }
+    drag.moved = true;
+    drag.g.style.left = (e.clientX - drag.size/2) + 'px'; drag.g.style.top = (e.clientY - drag.size/2) + 'px';
+    const sq = sqAt(e.clientX, e.clientY);
+    if(sq !== drag.hover){ drag.hover && squares[drag.hover]?.classList.remove('hov'); drag.hover = sq; sq && squares[sq].classList.add('hov'); }
+  });
+  const endDrag = e => {
+    if(rdrag && e.type === 'pointerup' && e.button === 2){
+      const to = sqAt(e.clientX, e.clientY), from = rdrag.from; rdrag = null;
+      if(to){
+        const key = from === to ? 'c'+from : 'a'+from+to;
+        const i = S.marks.indexOf(key);
+        i >= 0 ? S.marks.splice(i, 1) : S.marks.push(key);
+        drawMarks();
+      }
+      return;
+    }
+    if(!drag) return;
+    const d = drag; drag = null;
+    d.g.remove(); d.src?.classList.remove('dragging');
+    d.hover && squares[d.hover]?.classList.remove('hov');
+    const sq = e.type === 'pointerup' ? sqAt(e.clientX, e.clientY) : null;
+    if(sq && sq !== d.from && d.moved){ if(!tryMove(d.from, sq, false)){ S.sel = null; S.targets = []; drawBoard(false); } }
+    else if(sq === d.from && d.again && !d.moved) select(null);
+  };
+  $('#board').addEventListener('pointerup', endDrag);
+  $('#board').addEventListener('pointercancel', endDrag);
+
+  /* --- navigācija --- */
+  function go(n){
+    const len = S.chess.history().length;
+    n = Math.max(0, Math.min(len, n));
+    S.view = n === len ? null : n;
+    S.sel = null; S.targets = [];
+    drawBoard(false); drawBars(); drawMoves(); drawStatus();
+    if(n > 0){ const pos = shown(); const m = pos.history({verbose:true}).pop(); playFor(m, pos); }
+  }
+  const cur = () => S.view === null ? S.chess.history().length : S.view;
+  document.querySelector('.nav').onclick = e => {
+    const b = e.target.closest('button'); if(!b) return;
+    ({first:()=>go(0), prev:()=>go(cur()-1), next:()=>go(cur()+1), last:()=>go(1e9)})[b.dataset.nav]();
+  };
+  $('#moves').onclick = e => { const m = e.target.closest('.mv'); if(m) go(+m.dataset.p); };
+  addEventListener('keydown', e => {
+    if(e.target.tagName === 'INPUT') return;
+    if(e.key==='ArrowLeft') go(cur()-1);
+    if(e.key==='ArrowRight') go(cur()+1);
+    if(e.key==='ArrowUp') go(0);
+    if(e.key==='ArrowDown') go(1e9);
+    if(e.key==='f') $('#bflip').click();
+  });
+
+  /* --- pogas --- */
+  $('#bflip').onclick = () => { S.flip = !S.flip; buildBoard(); drawAll(false); };
+  $('#bautorot').onclick = () => {
+    S.autoRotate = !S.autoRotate; store.set('gambits:autorotate', S.autoRotate ? '1' : '0');
+    S.flip = false; buildBoard(); drawAll(false);
+    toast(S.autoRotate ? 'Board turns to the player to move' : 'Board stays with White at the bottom');
+  };
+  $('#bresign').onclick = () => {
+    const early = S.chess.history().length < 2;
+    if(!confirm(early ? 'Abort the game?' : 'Resign this game?')) return;
+    api('/api/action', {id:S.id, token:S.token, type: early ? 'abort' : 'resign'});
+  };
+  $('#bdraw').onclick = () => {
+    if(localMode){ if(confirm('Agree to a draw?')) api('/api/action', {id:S.id, token:S.token, type:'draw_offer'}); return; }
+    api('/api/action', {id:S.id, token:S.token, type:'draw_offer'}); toast('Draw offered');
+  };
+  $('#acc').onclick = () => api('/api/action', {id:S.id, token:S.token, type:'draw_offer'});
+  $('#dec').onclick = () => api('/api/action', {id:S.id, token:S.token, type:'draw_decline'});
+  $('#chatform').onsubmit = e => {
+    e.preventDefault();
+    const t = $('#chatin').value.trim(); if(!t) return;
+    $('#chatin').value = '';
+    api('/api/action', {id:S.id, token:S.token, type:'chat', text:t});
+  };
+  function copyLink(){
+    (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject())
+      .then(()=>toast('Link copied!'))
+      .catch(()=>{ $('#lnk')?.select(); document.execCommand('copy'); toast('Link copied!'); });
+  }
+
+  /* --- pievienošanās un long-poll cikls --- */
+  async function start(){
+    buildBoard(); drawBoard(false);
+    if(localMode){
+      S.token = 'local'; S.me = 'w'; buildBoard();
+      (async () => { for(;;){ applyState(LG.state()); S.v = LG.v; await LG.wait(S.v); } })();
+      return;
+    }
+    if(!ME.name){
+      const n = await askName();
+      if(n){ ME.name = n; store.set('gambits:name', n); hello(); }
+    }
+    let j;
+    try{ j = await api('/api/join', {id:S.id, token:S.token, name: ME.name || ''}); }
+    catch{ j = {error:true}; }
+    if(j.error){
+      $('#ov').classList.remove('hidden');
+      $('#ov').innerHTML = `<div class="ocard"><h3>Game not found</h3><p>The link may be wrong or the game has expired.</p><a class="btn g" href="/" style="display:block;text-decoration:none">Start a new game</a></div>`;
+      return;
+    }
+    if(j.token) S.token = j.token;
+    S.me = j.color; buildBoard();
+    if(!S.me) toast('Both seats are taken — you are spectating');
+    poll();
+  }
+  function askName(){
+    return new Promise(res => {
+      const ov = $('#ov'); ov.classList.remove('hidden'); ov.dataset.k = 'name';
+      ov.innerHTML = `<div class="ocard"><div style="font-size:44px">♞</div><h3>You’re invited to a game of chess!</h3><p>Enter your name and start playing.</p>
+        <form id="nf"><input class="field" id="nm" maxlength="20" placeholder="Your name" autofocus>
+        <button class="big">Play</button></form></div>`;
+      $('#nf').onsubmit = e => { e.preventDefault(); unlockAudio(); ov.dataset.k=''; ov.classList.add('hidden'); res($('#nm').value.trim()); };
+    });
+  }
+  async function poll(){
+    let fails = 0;
+    for(;;){
+      try{
+        const r = await fetch(`/api/state?id=${S.id}&token=${S.token}&since=${S.v}`, {cache:'no-store'});
+        if(r.status === 404){ toast('This game no longer exists'); return; }
+        const st = await r.json();
+        S.v = st.v; fails = 0;
+        applyState(st);
+      }catch{
+        fails++;
+        if(fails === 2) toast('Connection lost — retrying…');
+        await new Promise(r => setTimeout(r, Math.min(5000, 600*fails)));
+      }
+    }
+  }
+  start();
+}
+
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+</script>
+</body>
+</html>
