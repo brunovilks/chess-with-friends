@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Get Gambit — Chess with Friends</title>
+<meta name="description" content="Download Gambit for Android and play chess with your friends.">
+<meta name="theme-color" content="#262421">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<style>
+:root{
+  --bg:#262421; --card:#302e2b; --card2:#3a3835; --line:#45423e;
+  --text:#fff; --muted:#a7a5a1; --accent:#81b64c; --accent2:#95c86a; --accent-sh:#45753c; --gold:#f2c46b;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{min-height:100vh;background:radial-gradient(1200px 600px at 50% -200px,#3b4a2c 0%,var(--bg) 60%) var(--bg);
+  color:var(--text);font:16px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent2)}
+.wrap{max-width:460px;margin:0 auto;padding:20px 16px 40px}
+.top{display:flex;align-items:center;justify-content:space-between;min-height:36px}
+.back{color:var(--muted);text-decoration:none;font-size:14px;padding:6px 0}
+.back:hover{color:#fff}
+.hidden{display:none!important}
+
+.hero{text-align:center;padding:18px 0 8px}
+.icon{width:104px;height:104px;border-radius:26px;box-shadow:0 12px 34px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.06);
+  animation:pop .5s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes pop{from{transform:scale(.6);opacity:0}}
+h1{font-size:30px;line-height:1.15;margin:16px 0 4px;letter-spacing:-.3px}
+.sub{color:var(--muted);margin:0}
+.badge{display:inline-flex;gap:6px;align-items:center;margin-top:14px;padding:5px 12px;border-radius:99px;
+  background:rgba(129,182,76,.14);color:var(--accent2);font-size:13px;font-weight:600}
+.badge.up{background:rgba(242,196,107,.15);color:var(--gold)}
+
+.card{background:var(--card);border-radius:16px;padding:18px;margin-top:18px;box-shadow:0 1px 0 rgba(255,255,255,.04) inset}
+.btn{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:17px 18px;
+  border:0;border-radius:12px;background:var(--accent);color:#fff;font:700 19px/1.2 inherit;text-decoration:none;cursor:pointer;
+  box-shadow:0 5px 0 var(--accent-sh);transition:transform .08s,box-shadow .08s,background .15s;overflow:hidden}
+.btn:hover{background:var(--accent2)}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--accent-sh)}
+.btn svg{width:24px;height:24px;flex:none}
+.btn .shine{position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.25) 50%,transparent 70%);
+  transform:translateX(-100%);animation:shine 3.2s ease-in-out 1s infinite}
+@keyframes shine{40%,100%{transform:translateX(100%)}}
+.meta{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:13px;margin-top:14px}
+.meta b{color:#ddd;font-weight:600}
+
+.progress{margin-top:16px}
+.bar{height:6px;border-radius:9px;background:var(--card2);overflow:hidden}
+.bar i{display:block;height:100%;width:40%;border-radius:9px;background:var(--accent);animation:slide 1.2s ease-in-out infinite}
+@keyframes slide{from{transform:translateX(-100%)}to{transform:translateX(260%)}}
+.progress p{margin:10px 0 0;text-align:center;color:var(--muted);font-size:14px}
+
+h2{font-size:16px;margin:0 0 12px}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.steps li{display:flex;gap:12px;align-items:flex-start;padding:2px 0;transition:opacity .3s}
+.steps .n{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--card2);
+  font-weight:700;font-size:14px;color:var(--muted);transition:background .3s,color .3s}
+.steps li.on .n{background:var(--accent);color:#fff}
+.steps li.done .n{background:var(--accent-sh);color:#fff}
+.steps b{display:block;font-size:15px}
+.steps span{color:var(--muted);font-size:14px}
+
+.notes{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.notes li{display:flex;gap:10px;font-size:15px}
+.notes li::before{content:"✓";color:var(--accent);font-weight:800}
+
+.qr{display:flex;gap:16px;align-items:center}
+.qr .code{flex:none;width:132px;height:132px;background:#fff;border-radius:12px;padding:8px;display:grid;place-items:center}
+.qr .code svg{width:100%;height:100%}
+.qr p{margin:0;color:var(--muted);font-size:14px}
+.qr p b{color:#fff;display:block;font-size:16px;margin-bottom:4px}
+
+.invite{border:1px solid rgba(129,182,76,.35);background:rgba(129,182,76,.08)}
+.invite p{margin:0;font-size:15px}
+.note{color:var(--muted);font-size:13px;text-align:center;margin-top:22px}
+.ios{text-align:center}
+.ios p{margin:6px 0 0;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back hidden" id="back" href="/">← Back to Gambit</a>
+    <span></span>
+  </div>
+
+  <section class="hero">
+    <img class="icon" src="/icon-512.png" alt="Gambit app icon">
+    <h1 id="title">Gambit</h1>
+    <p class="sub" id="subtitle">Chess with friends — online, by link or on one phone</p>
+    <div class="badge" id="badge">Free · Android</div>
+  </section>
+
+  <section class="card invite hidden" id="invite">
+    <p>♟ <b>You've been invited to a game.</b> Install Gambit, then open the invite link again — it will open right in the app.</p>
+  </section>
+
+  <section class="card" id="dl">
+    <a class="btn" id="get" href="/download/gambit.apk" download>
+      <span class="shine"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m6.5 10 5.5 5.5 5.5-5.5"/><path d="M4 20h16"/></svg>
+      <span id="getlabel">Download for Android</span>
+    </a>
+    <div class="meta"><span>Version <b id="ver">…</b></span><span id="sizewrap">Size <b id="size">…</b></span><span id="datewrap" class="hidden">Updated <b id="date"></b></span></div>
+    <div class="progress hidden" id="prog">
+      <div class="bar"><i></i></div>
+      <p id="progtxt">Downloading Gambit… it appears in your notifications.</p>
+    </div>
+  </section>
+
+  <section class="card ios hidden" id="ios">
+    <b>Gambit is on Android for now.</b>
+    <p>Open this page on an Android phone to install it.</p>
+  </section>
+
+  <section class="card qr hidden" id="qr">
+    <div class="code" id="qrcode" aria-label="QR code for this page"></div>
+    <p><b>Install on your phone</b>Scan this code with your Android phone's camera to open this page there.</p>
+  </section>
+
+  <section class="card">
+    <h2 id="howh">How to install</h2>
+    <ol class="steps" id="steps">
+      <li id="s1"><div class="n">1</div><div><b>Download</b><span>Tap the green button above.</span></div></li>
+      <li id="s2"><div class="n">2</div><div><b>Open the file</b><span>Tap <i>Gambit.apk</i> in your notifications or Downloads.</span></div></li>
+      <li id="s3"><div class="n">3</div><div><b>Allow and install</b><span>If asked, allow installing from this source, then tap <i>Install</i>.</span></div></li>
+      <li id="s4"><div class="n">4</div><div><b>Play</b><span>Open Gambit and sign in with Google.</span></div></li>
+    </ol>
+  </section>
+
+  <section class="card hidden" id="newcard">
+    <h2 id="newh">What's in Gambit</h2>
+    <ul class="notes" id="notes"></ul>
+  </section>
+
+  <p class="note">Updating keeps your account — just install over the old app.<br>
+    <a href="/privacy">Privacy &amp; Terms</a></p>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const ss = {get:k=>{try{return sessionStorage.getItem(k)}catch(e){return null}}};
+  const q = new URLSearchParams(location.search);
+  const ua = navigator.userAgent;
+  const android = /Android/i.test(ua);
+  const ios = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const installed = +(ss.get('gambits:apk') || 0);
+  const inApp = installed > 0;
+  const update = q.has('update') || inApp;
+
+  if(inApp) $('back').classList.remove('hidden');
+  if(q.get('g')) $('invite').classList.remove('hidden');
+  if(ios){ $('ios').classList.remove('hidden'); $('dl').classList.add('hidden'); }
+  else if(!android) $('qr').classList.remove('hidden');
+
+  const mb = n => n ? (n / 1048576).toFixed(1) + ' MB' : '—';
+  fetch('/api/app').then(r => r.json()).then(a => {
+    $('ver').textContent = a.name;
+    $('size').textContent = mb(a.size);
+    if(a.date){ $('date').textContent = new Date(a.date + 'T12:00:00').toLocaleDateString(undefined, {day:'numeric', month:'short', year:'numeric'}); $('datewrap').classList.remove('hidden'); }
+    if(update && installed && a.version > installed){
+      $('title').textContent = 'Update available';
+      $('subtitle').textContent = 'A new version of Gambit is ready.';
+      $('badge').textContent = 'New · version ' + a.name;
+      $('badge').classList.add('up');
+      $('getlabel').textContent = 'Download update';
+      $('howh').textContent = 'How to update';
+      $('newh').textContent = "What's new";
+    } else if(inApp && a.version <= installed){
+      $('badge').textContent = '✓ You have the latest version';
+    }
+    if(a.notes && a.notes.length){
+      $('notes').innerHTML = '';
+      a.notes.forEach(t => { const li = document.createElement('li'); li.textContent = t; $('notes').appendChild(li); });
+      $('newcard').classList.remove('hidden');
+    }
+  }).catch(() => { $('ver').textContent = '—'; $('sizewrap').classList.add('hidden'); });
+
+  // lejupielādes gaitas animācija un soļu izcelšana
+  $('s1').classList.add('on');
+  $('get').addEventListener('click', () => {
+    $('prog').classList.remove('hidden');
+    $('s1').classList.replace('on', 'done');
+    $('s2').classList.add('on');
+    setTimeout(() => {
+      $('progtxt').innerHTML = '✓ Download started. Open <b>Gambit.apk</b> from your notifications to install.';
+      document.querySelector('.bar i').style.cssText = 'width:100%;animation:none';
+    }, 2500);
+  });
+
+  // QR kods datoriem, lai lapu atvērtu telefonā
+  if(!android && !ios){
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
+    s.onload = () => { try{
+      const qr = qrcode(0, 'M'); qr.addData(location.origin + '/download'); qr.make();
+      $('qrcode').innerHTML = qr.createSvgTag({cellSize: 4, margin: 0, scalable: true});
+    }catch(e){ $('qr').classList.add('hidden'); } };
+    s.onerror = () => $('qr').classList.add('hidden');
+    document.head.appendChild(s);
+  }
+})();
+</script>
+</body>
+</html>

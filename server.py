@@ -31,6 +31,7 @@ GAME_TTL = 24 * 3600          # neaktīvas spēles dzēš pēc 24 h
 POLL_WAIT = 20                # long-poll gaidīšana sekundēs
 ONLINE_WINDOW = 25            # cik sekundes skaitās "tiešsaistē"
 ABANDON = 45                  # pēc cik sekundēm prombūtnes var pieprasīt uzvaru
+KEEPALIVE_EVERY = 5 * 60      # Render bezmaksas serveris aizmieg pēc 15 min bez pieprasījumiem
 
 PRIVACY_HTML = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>Gambit — Privacy & Terms</title>
@@ -58,6 +59,40 @@ piece sets from lichess (CC BY-NC-SA 4.0 / GPLv2+ / Apache 2.0, see the project 
 games = {}
 games_lock = threading.Lock()
 INDEX_CACHE = {}
+
+
+def app_info():
+    """Jaunākā Android lietotnes versija (app_version.json) un APK faila izmērs."""
+    info = {"version": 1, "name": "1.0.0", "date": "", "notes": []}
+    for path in (os.path.join(ROOT, "app_version.json"),):
+        try:
+            with open(path, encoding="utf-8") as f:
+                info.update(json.load(f))
+        except (OSError, ValueError):
+            pass
+    apk = apk_path()
+    info["size"] = os.path.getsize(apk) if apk else 0
+    return info
+
+
+def apk_path():
+    for path in (os.path.join(ROOT, "apk", "Gambit.apk"), os.path.join(ROOT, "Gambit.apk")):
+        if os.path.isfile(path):
+            return path
+    return None
+
+
+def keepalive_loop():
+    """Pats sevi pamodina caur publisko adresi, lai Render serveris neaizmigtu, kad neviens nespēlē."""
+    url = (os.environ.get("KEEPALIVE_URL") or os.environ.get("RENDER_EXTERNAL_URL") or "").rstrip("/")
+    if not url:
+        return
+    while True:
+        time.sleep(KEEPALIVE_EVERY)
+        try:
+            urllib.request.urlopen(url + "/health", timeout=30).read()
+        except Exception:
+            pass
 
 
 def now_ms():
@@ -531,10 +566,26 @@ class Handler(BaseHTTPRequestHandler):
             if os.path.isfile(path):
                 with open(path, "rb") as f:
                     body = f.read()
-                cache = "no-cache" if path.endswith(("sw.js", ".webmanifest")) else "public, max-age=604800"
+                cache = "no-cache" if path.endswith(("sw.js", ".webmanifest", ".html")) else "public, max-age=604800"
                 self.send_body(body, ctype, cache)
                 return
         self.send_json({"error": "Not found"}, 404)
+
+    def send_apk(self):
+        # Android lietotnes lejupielāde; pārlūks to saglabā kā Gambit-<versija>.apk
+        path = apk_path()
+        if not path:
+            return self.send_json({"error": "Not found"}, 404)
+        with open(path, "rb") as f:
+            body = f.read()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/vnd.android.package-archive")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Content-Disposition", 'attachment; filename="Gambit-%s.apk"' % app_info()["name"])
+        self.send_header("Cache-Control", "no-cache")
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
 
     def send_sound(self, name):
         # tikai skaņu faili ar drošu nosaukumu, piem. snd_start.ogg vai wood_move.wav
@@ -584,7 +635,14 @@ class Handler(BaseHTTPRequestHandler):
         if url.path == "/health":
             return self.send_json({"ok": True, "games": len(games)})
         if url.path == "/api/config":
-            return self.send_json({"googleClientId": GOOGLE_CLIENT_ID})
+            return self.send_json({"googleClientId": GOOGLE_CLIENT_ID, "app": app_info()})
+        if url.path == "/api/app":
+            return self.send_json(app_info())
+        if url.path in ("/download", "/download/", "/update"):
+            return self.send_file([os.path.join(ROOT, "public", "download.html"), os.path.join(ROOT, "download.html")],
+                                  "text/html; charset=utf-8")
+        if url.path in ("/download/gambit.apk", "/Gambit.apk", "/gambit.apk"):
+            return self.send_apk()
         if url.path.startswith("/p/"):
             return self.send_piece(url.path[3:])
         # instalējamā lietotne (PWA) un Android APK sasaiste
@@ -993,6 +1051,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     threading.Thread(target=cleanup_loop, daemon=True).start()
+    threading.Thread(target=keepalive_loop, daemon=True).start()
     port = int(os.environ.get("PORT", "8000"))
     server = ThreadingHTTPServer(("0.0.0.0", port), Handler)
     server.daemon_threads = True

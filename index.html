@@ -2,6 +2,25 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>
+// Spēlēt var tikai Android lietotnē (APK). Lietotne atver lapu ar ?apk=<versija>
+// (vecā 1. versija bez tā, bet ar android-app:// referrer). Pārlūkā — uz lejupielādes lapu.
+(function(){
+  var PKG = 'android-app://com.onrender.chess_with_friends_thuc.twa', K = 'gambits:apk', v = 0;
+  try{
+    var q = new URLSearchParams(location.search).get('apk');
+    if(q && +q > 0) sessionStorage.setItem(K, String(+q));
+    else if(!sessionStorage.getItem(K) && (document.referrer.indexOf(PKG) === 0 ||
+            matchMedia('(display-mode: standalone)').matches)) sessionStorage.setItem(K, '1');
+    v = +(sessionStorage.getItem(K) || 0);
+  }catch(e){}
+  window.GAMBIT_APK = v;
+  if(!v){
+    var m = location.pathname.match(/^\/g\/([a-z0-9]+)/);
+    location.replace('/download' + (m ? '?g=' + m[1] : ''));
+  }
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Gambit — Chess with Friends</title>
 <meta name="theme-color" content="#302e2b">
@@ -345,6 +364,17 @@ piece.dragging{opacity:.3}
 
 .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);background:#ece8e1;color:#211f1c;padding:10px 18px;border-radius:9px;font-weight:700;opacity:0;transition:.2s;z-index:100;pointer-events:none}
 .toast.show{opacity:1;transform:translate(-50%,0)}
+.upd{position:fixed;left:50%;top:60px;transform:translate(-50%,-16px);opacity:0;z-index:90;display:flex;align-items:center;gap:10px;
+  width:min(440px,calc(100vw - 24px));padding:10px 10px 10px 14px;border-radius:14px;background:#3a3835;color:#fff;
+  box-shadow:0 10px 30px rgba(0,0,0,.45),0 0 0 1px rgba(242,196,107,.35);transition:.3s cubic-bezier(.2,1.2,.4,1)}
+.upd.show{opacity:1;transform:translate(-50%,0)}
+.upd .dot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 4px rgba(242,196,107,.2);animation:updp 1.6s infinite}
+@keyframes updp{50%{box-shadow:0 0 0 7px rgba(242,196,107,.05)}}
+.upd .t{flex:1;min-width:0;font-size:14px;line-height:1.3}
+.upd .t b{display:block;font-size:15px}
+.upd .t span{color:var(--muted)}
+.upd a{flex:none;padding:9px 14px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;text-decoration:none;box-shadow:0 3px 0 var(--accent-sh)}
+.upd button{flex:none;width:30px;height:30px;border-radius:8px;color:var(--muted);font-size:18px}
 footer{text-align:center;color:#6b665e;font-size:12px;padding:10px}
 footer a{color:#6b665e}
 
@@ -371,6 +401,12 @@ footer a{color:#6b665e}
   <button class="hbtn gear" id="bset" title="Settings" aria-label="Settings">⚙</button>
 </header>
 <div class="modal hidden" id="setm"></div>
+<div class="upd hidden" id="upd" role="status">
+  <span class="dot"></span>
+  <div class="t"><b>New update</b><span id="updtxt">A new version of Gambit is ready</span></div>
+  <a href="/download?update=1" id="updgo">Update</a>
+  <button id="updx" aria-label="Later">✕</button>
+</div>
 
 <!-- SĀKUMLAPA -->
 <main id="home" class="hidden">
@@ -806,8 +842,26 @@ async function onGoogle(resp){
   toast('Welcome, ' + (r.name || 'player') + '!');
   renderSocial();
 }
+// jaunas APK versijas paziņojums
+function checkUpdate(app){
+  const have = window.GAMBIT_APK || 0;
+  if(!app || !have || app.version <= have) return;
+  try{ if(sessionStorage.getItem('gambits:updlater') === String(app.version)) return; }catch{}
+  const box = document.getElementById('upd');
+  document.getElementById('updtxt').textContent = 'Version ' + app.name + ' is ready to install';
+  box.classList.remove('hidden');
+  requestAnimationFrame(() => requestAnimationFrame(() => box.classList.add('show')));
+  document.getElementById('updx').onclick = () => {
+    box.classList.remove('show'); setTimeout(() => box.classList.add('hidden'), 300);
+    try{ sessionStorage.setItem('gambits:updlater', String(app.version)); }catch{}
+  };
+}
 async function initGoogle(){
-  try{ GCID = (await (await fetch('/api/config')).json()).googleClientId || ''; }catch{}
+  try{
+    const cfg = await (await fetch('/api/config')).json();
+    GCID = cfg.googleClientId || '';
+    checkUpdate(cfg.app);
+  }catch{}
   if(!GCID) return;
   await new Promise((ok, bad) => { const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true; s.onload = ok; s.onerror = bad; document.head.appendChild(s); }).catch(() => {});
   if(!window.google?.accounts?.id) return;
